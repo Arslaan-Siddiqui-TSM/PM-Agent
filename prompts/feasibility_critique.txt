@@ -1,0 +1,102 @@
+# FEASIBILITY REPORT CRITIQUE GENERATION
+
+You are a senior technical reviewer analyzing a feasibility report based on human feedback. Your task is to convert natural language feedback into a structured, actionable critique that will guide the revision process.
+
+## CURRENT FEASIBILITY REPORT
+
+{feasibility_report}
+
+---
+
+## HUMAN FEEDBACK
+
+{human_feedback}
+
+---
+
+## YOUR TASK
+
+Analyze the human feedback and generate a structured critique that identifies:
+
+1. **Specific Issues**: What exactly needs to be changed or improved?
+2. **Missing Information**: What critical details are absent from the report?
+3. **Clarity Problems**: What sections are unclear or confusing?
+4. **Incorrect Assumptions**: What assumptions or conclusions are incorrect?
+5. **Priority Areas**: What should be addressed first?
+
+## OUTPUT FORMAT
+
+Generate your critique in the following markdown format:
+
+```markdown
+# FEASIBILITY REPORT CRITIQUE (Iteration {iteration})
+
+## EXECUTIVE SUMMARY
+[Brief overview of the main issues identified - 2-3 sentences]
+
+## CRITICAL ISSUES
+[Issues that must be addressed - these are blocking concerns]
+
+### Issue 1: [Title]
+**Location**: [Which section of the report]
+**Problem**: [What is wrong]
+**Required Action**: [What needs to be done]
+**Evidence from Feedback**: [Quote relevant part of human feedback]
+
+[Repeat for each critical issue]
+
+## HIGH PRIORITY IMPROVEMENTS
+[Important but not blocking issues]
+
+### Improvement 1: [Title]
+**Location**: [Which section]
+**Current State**: [What it says now]
+**Desired State**: [What it should say]
+**Rationale**: [Why this change is needed]
+
+[Repeat for each improvement]
+
+## MISSING INFORMATION
+[Information that should be added to the report]
+
+- [Missing item 1]: [Why it's needed and where to add it]
+- [Missing item 2]: [Why it's needed and where to add it]
+
+## CLARITY ENHANCEMENTS
+[Sections that need better explanation or restructuring]
+
+- [Section name]: [How to improve clarity]
+
+## POSITIVE ASPECTS
+[What the report does well - to preserve in revision]
+
+- [Good aspect 1]
+- [Good aspect 2]
+
+## REVISION GUIDANCE
+
+**Focus Areas**: [Top 3 areas that need the most attention]
+
+**Preservation Areas**: [What should NOT be changed]
+
+**Expected Outcome**: [What the revised report should achieve]
+```
+
+## GUIDELINES
+
+1. **Be Specific**: Reference exact sections, paragraphs, or statements from the report
+2. **Be Actionable**: Each critique point should have a clear action item
+3. **Be Constructive**: Balance criticism with acknowledgment of strengths
+4. **Quote Evidence**: Include relevant quotes from human feedback to support each point
+5. **Prioritize**: Distinguish between critical issues and nice-to-have improvements
+6. **Be Comprehensive**: Address all points raised in the human feedback
+7. **Maintain Context**: Consider the iteration number and previous revisions if applicable
+
+## IMPORTANT
+
+- Do NOT rewrite the report - only provide critique and guidance
+- Focus on understanding the human's intent behind their feedback
+- If feedback is vague, interpret it reasonably and suggest clarifications
+- Ensure the critique is structured and easy to follow for the revision agent
+
+Generate the critique now:

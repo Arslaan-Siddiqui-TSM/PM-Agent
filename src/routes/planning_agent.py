@@ -37,6 +37,12 @@ class FeasibilityRequest(BaseModel):
     development_context: Optional[Dict[str, str]] = Field(None, description="Development process information from user (methodology, team size, timeline, etc.)")
 
 
+class FeasibilityReviewRequest(BaseModel):
+    session_id: str = Field(..., description="Session ID from upload response")
+    approved: bool = Field(..., description="True to approve report, False to request changes")
+    feedback: Optional[str] = Field(None, description="Required when approved=False. Specific feedback for revision.")
+
+
 class GeneratePlanRequest(BaseModel):
     session_id: str = Field(..., description="Session ID from upload response")
     use_intelligent_processing: bool = Field(True, description="Use Document Intelligence Pipeline for processing")
@@ -199,6 +205,137 @@ async def check_feasibility(request: FeasibilityRequest):
         session=session,
         development_context=request.development_context
     )
+    
+    return result
+
+
+# ============================================================================
+# Endpoint 2a: Start Feasibility with HITL (New)
+# ============================================================================
+
+@router.post("/feasibility/start")
+async def start_feasibility(request: FeasibilityRequest):
+    """
+    Start feasibility assessment with human-in-the-loop support.
+    
+    Generates initial feasibility report and pauses for human review.
+    Supports iterative revision based on feedback.
+    
+    Workflow:
+    1. Call /feasibility/start to generate initial report
+    2. Call /feasibility/review with approval or feedback
+    3. If feedback provided, report is revised and awaits review again
+    4. Repeat until approved or max iterations reached
+    
+    Returns:
+        - status: "awaiting_human" (waiting for review)
+        - iteration: Current iteration number (0 = initial)
+        - feasibility_report: Generated report content
+        - message: Next steps
+    """
+    # Get session
+    session = sessions.get(request.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session.is_expired():
+        raise HTTPException(status_code=410, detail="Session expired")
+    
+    # Validate processing complete
+    if session.processing_status != "completed":
+        if session.processing_status == "processing":
+            raise HTTPException(
+                status_code=425,
+                detail="Document processing still in progress. Use /upload-status/{session_id} to check."
+            )
+        elif session.processing_status == "failed":
+            raise HTTPException(
+                status_code=500,
+                detail=f"Document processing failed: {session.processing_error or 'Unknown error'}"
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid processing state: {session.processing_status}"
+            )
+    
+    if not session.parsed_documents and not session.parsed_documents_dir:
+        raise HTTPException(
+            status_code=500,
+            detail="Missing parsed documents. Please re-upload."
+        )
+    
+    # Delegate to handler
+    handler = FeasibilityHandler(verbose=False)
+    result = handler.start_feasibility(
+        session=session,
+        development_context=request.development_context
+    )
+    
+    return result
+
+
+@router.post("/feasibility/review")
+async def review_feasibility(request: FeasibilityReviewRequest):
+    """
+    Submit human review decision for feasibility report.
+    
+    Args:
+        - approved: True to approve and complete workflow, False to request changes
+        - feedback: Required when approved=False. Specific feedback for improvements.
+    
+    Returns:
+        - If approved: status="approved", workflow complete
+        - If changes requested: status="awaiting_human", new iteration with revised report
+        - If max iterations reached: status="max_iterations_reached"
+    
+    Example feedback:
+        "The technical stack section needs more detail on database choices. 
+         Also, the timeline seems too optimistic for a team of 3 developers."
+    """
+    # Get session
+    session = sessions.get(request.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session.is_expired():
+        raise HTTPException(status_code=410, detail="Session expired")
+    
+    # Delegate to handler
+    handler = FeasibilityHandler(verbose=False)
+    result = handler.review_feasibility(
+        session=session,
+        approved=request.approved,
+        feedback=request.feedback
+    )
+    
+    return result
+
+
+@router.get("/feasibility/status/{session_id}")
+async def get_feasibility_status(session_id: str):
+    """
+    Get current status of feasibility assessment workflow.
+    
+    Returns:
+        - status: Current workflow state (not_started/generating/awaiting_human/approved/max_iterations_reached)
+        - iteration: Current iteration number
+        - max_iterations: Maximum allowed iterations
+        - feasibility_report: Current report content
+        - critique: Critique from last feedback (if available)
+        - revision_history_count: Number of revisions completed
+    """
+    # Get session
+    session = sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session.is_expired():
+        raise HTTPException(status_code=410, detail="Session expired")
+    
+    # Delegate to handler
+    handler = FeasibilityHandler(verbose=False)
+    result = handler.get_feasibility_status(session=session)
     
     return result
 

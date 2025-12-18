@@ -1,7 +1,7 @@
 """
 Feasibility Handler
 
-Handles feasibility assessment generation using LLM.
+Handles feasibility assessment generation using LLM with HITL support.
 """
 
 from typing import Dict, Any, Optional
@@ -34,6 +34,336 @@ class FeasibilityHandler:
             verbose: Enable verbose console output
         """
         self.verbose = verbose
+    
+    def start_feasibility(
+        self,
+        session: Session,
+        development_context: Optional[Dict[str, str]] = None
+    ) -> dict:
+        """
+        Start feasibility assessment with HITL support.
+        
+        Initiates graph execution and pauses at human review gate.
+        
+        Args:
+            session: Session object
+            development_context: Development process information
+        
+        Returns:
+            Dictionary with status, report, and metadata
+        """
+        print(f"\n{'='*60}")
+        print(f"🚀 STARTING FEASIBILITY ASSESSMENT (HITL Mode)")
+        print(f"Session: {session.session_id[:8]}")
+        print(f"{'='*60}\n")
+        
+        start_time = time.time()
+        
+        try:
+            from src.app.feasibility_agent import save_development_context_to_json
+            from src.states.feasibility_state import FeasibilityState
+            from src.app.feasibility_graph import get_feasibility_graph
+            
+            # Step 1: Get MD file paths
+            print("Step 1: Preparing document input")
+            md_file_paths = self._get_md_file_paths(session)
+            print(f"✅ Prepared {len(md_file_paths)} MD files\n")
+            
+            # Step 2: Save development context if provided
+            dev_context_json_path = None
+            if development_context:
+                print("Step 2: Saving development context")
+                dev_context_json_path = save_development_context_to_json(
+                    development_context=development_context,
+                    session_id=session.session_id,
+                    output_dir="output/intermediate"
+                )
+                print(f"✅ Context saved: {dev_context_json_path}\n")
+            
+            # Step 3: Initialize state
+            print("Step 3: Initializing feasibility state")
+            initial_state = FeasibilityState(
+                session_id=session.session_id,
+                md_file_paths=md_file_paths,
+                development_context=development_context,
+                iteration=0,
+                max_iterations=3,
+                status="generating"
+            )
+            print(f"✅ State initialized\n")
+            
+            # Step 4: Execute graph until interrupt
+            print("Step 4: Starting graph execution")
+            graph = get_feasibility_graph()
+            
+            # Create thread config for checkpointing
+            thread_config = {
+                "configurable": {
+                    "thread_id": session.session_id
+                }
+            }
+            
+            # Stream execution until interrupt (human review gate)
+            final_state = None
+            for event in graph.stream(initial_state, thread_config, stream_mode="values"):
+                final_state = event
+                print(f"  Current status: {event.get('status', 'unknown')}")
+            
+            print(f"✅ Graph paused at human review gate\n")
+            
+            # Save initial outputs
+            if final_state:
+                thinking_path, report_path = self._save_feasibility_files(
+                    {
+                        "thinking_summary": final_state.get("thinking_summary", ""),
+                        "feasibility_report": final_state.get("feasibility_report", "")
+                    },
+                    session.session_id
+                )
+                
+                # Store in session
+                session.feasibility_assessment = final_state.get("feasibility_report", "")
+                session.feasibility_file_path = str(report_path)
+            
+            execution_time = time.time() - start_time
+            
+            print(f"\n{'='*60}")
+            print(f"✅ FEASIBILITY GENERATION COMPLETE")
+            print(f"⏱️  Execution time: {execution_time:.2f}s")
+            print(f"🚦 Status: awaiting_human")
+            print(f"{'='*60}\n")
+            
+            return {
+                "session_id": session.session_id,
+                "status": "awaiting_human",
+                "iteration": final_state.get("iteration", 0) if final_state else 0,
+                "max_iterations": final_state.get("max_iterations", 3) if final_state else 3,
+                "feasibility_report": final_state.get("feasibility_report", "") if final_state else "",
+                "thinking_summary": final_state.get("thinking_summary", "") if final_state else "",
+                "message": "Feasibility report generated. Awaiting human review.",
+                "execution_time": execution_time
+            }
+            
+        except Exception as e:
+            print(f"\n❌ ERROR: {str(e)}\n")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error starting feasibility assessment: {str(e)}"
+            )
+    
+    def review_feasibility(
+        self,
+        session: Session,
+        approved: bool,
+        feedback: Optional[str] = None
+    ) -> dict:
+        """
+        Resume feasibility graph with human review decision.
+        
+        Args:
+            session: Session object
+            approved: True to approve, False to request changes
+            feedback: Required if approved=False, optional critique/feedback text
+        
+        Returns:
+            Dictionary with updated status and report
+        """
+        print(f"\n{'='*60}")
+        print(f"📝 PROCESSING HUMAN REVIEW")
+        print(f"Session: {session.session_id[:8]}")
+        print(f"Decision: {'✅ APPROVED' if approved else '🔄 REQUEST CHANGES'}")
+        print(f"{'='*60}\n")
+        
+        start_time = time.time()
+        
+        try:
+            from src.app.feasibility_graph import get_feasibility_graph
+            from langgraph.checkpoint.base import CheckpointTuple
+            
+            # Validate feedback if requesting changes
+            if not approved and not feedback:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Feedback is required when requesting changes (approved=False)"
+                )
+            
+            # Get graph and checkpointer
+            graph = get_feasibility_graph()
+            
+            # Thread config for resuming
+            thread_config = {
+                "configurable": {
+                    "thread_id": session.session_id
+                }
+            }
+            
+            # Get current state from checkpoint
+            state_snapshot = graph.get_state(thread_config)
+            current_state = state_snapshot.values
+            
+            print(f"Current iteration: {current_state.get('iteration', 0)}")
+            print(f"Current status: {current_state.get('status', 'unknown')}\n")
+            
+            if approved:
+                # Approved - update state and end workflow
+                print("✅ Report approved - completing workflow\n")
+                
+                updated_state = {
+                    **current_state,
+                    "approved": True,
+                    "status": "approved"
+                }
+                
+                # Update state and resume (will go to END)
+                graph.update_state(thread_config, updated_state)
+                
+                execution_time = time.time() - start_time
+                
+                return {
+                    "session_id": session.session_id,
+                    "status": "approved",
+                    "message": "Feasibility report approved successfully.",
+                    "feasibility_report": current_state.get("feasibility_report", ""),
+                    "execution_time": execution_time
+                }
+                
+            else:
+                # Changes requested - proceed with critique and revision
+                print(f"🔄 Changes requested\n")
+                print(f"Feedback ({len(feedback)} chars): {feedback[:100]}...\n")
+                
+                # Check if max iterations reached
+                current_iteration = current_state.get("iteration", 0)
+                max_iterations = current_state.get("max_iterations", 3)
+                
+                if current_iteration >= max_iterations:
+                    print(f"⚠️  Max iterations ({max_iterations}) reached\n")
+                    return {
+                        "session_id": session.session_id,
+                        "status": "max_iterations_reached",
+                        "message": f"Maximum iterations ({max_iterations}) reached. Cannot revise further.",
+                        "feasibility_report": current_state.get("feasibility_report", ""),
+                        "iteration": current_iteration,
+                        "execution_time": time.time() - start_time
+                    }
+                
+                # Update state with feedback
+                updated_state = {
+                    **current_state,
+                    "approved": False,
+                    "human_feedback": feedback,
+                    "status": "revising"
+                }
+                
+                # Update state to trigger revision workflow
+                graph.update_state(thread_config, updated_state)
+                
+                print("Step 1: Generating critique from feedback")
+                print("Step 2: Revising assessment")
+                print("Step 3: Re-generating report\n")
+                
+                # Resume execution - will go through critique → revise → generate → human_review_gate
+                final_state = None
+                for event in graph.stream(None, thread_config, stream_mode="values"):
+                    final_state = event
+                    print(f"  Status: {event.get('status', 'unknown')}, Iteration: {event.get('iteration', 0)}")
+                
+                # Save revised report
+                if final_state:
+                    thinking_path, report_path = self._save_feasibility_files(
+                        {
+                            "thinking_summary": final_state.get("thinking_summary", ""),
+                            "feasibility_report": final_state.get("feasibility_report", "")
+                        },
+                        session.session_id,
+                        iteration=final_state.get("iteration", 0)
+                    )
+                    
+                    # Update session
+                    session.feasibility_assessment = final_state.get("feasibility_report", "")
+                    session.feasibility_file_path = str(report_path)
+                
+                execution_time = time.time() - start_time
+                
+                print(f"\n{'='*60}")
+                print(f"✅ REVISION COMPLETE")
+                print(f"⏱️  Execution time: {execution_time:.2f}s")
+                print(f"🔄 New iteration: {final_state.get('iteration', 'unknown') if final_state else 'unknown'}")
+                print(f"🚦 Status: awaiting_human")
+                print(f"{'='*60}\n")
+                
+                return {
+                    "session_id": session.session_id,
+                    "status": "awaiting_human",
+                    "iteration": final_state.get("iteration", current_iteration + 1) if final_state else current_iteration + 1,
+                    "max_iterations": max_iterations,
+                    "feasibility_report": final_state.get("feasibility_report", "") if final_state else "",
+                    "critique": final_state.get("critique_md", "") if final_state else "",
+                    "message": f"Revision {final_state.get('iteration', '?') if final_state else '?'} complete. Awaiting review.",
+                    "execution_time": execution_time
+                }
+                
+        except Exception as e:
+            print(f"\n❌ ERROR: {str(e)}\n")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error processing review: {str(e)}"
+            )
+    
+    def get_feasibility_status(self, session: Session) -> dict:
+        """
+        Get current status of feasibility assessment workflow.
+        
+        Args:
+            session: Session object
+        
+        Returns:
+            Dictionary with current state information
+        """
+        print(f"Checking feasibility status for session: {session.session_id[:8]}")
+        
+        try:
+            from src.app.feasibility_graph import get_feasibility_graph
+            
+            graph = get_feasibility_graph()
+            
+            thread_config = {
+                "configurable": {
+                    "thread_id": session.session_id
+                }
+            }
+            
+            # Get state snapshot
+            state_snapshot = graph.get_state(thread_config)
+            
+            if not state_snapshot or not state_snapshot.values:
+                return {
+                    "session_id": session.session_id,
+                    "status": "not_started",
+                    "message": "No feasibility assessment in progress"
+                }
+            
+            current_state = state_snapshot.values
+            
+            return {
+                "session_id": session.session_id,
+                "status": current_state.get("status", "unknown"),
+                "iteration": current_state.get("iteration", 0),
+                "max_iterations": current_state.get("max_iterations", 3),
+                "approved": current_state.get("approved"),
+                "feasibility_report": current_state.get("feasibility_report", ""),
+                "thinking_summary": current_state.get("thinking_summary", ""),
+                "critique": current_state.get("critique_md", ""),
+                "revision_history_count": len(current_state.get("revision_history", [])),
+                "message": f"Current status: {current_state.get('status', 'unknown')}"
+            }
+            
+        except Exception as e:
+            print(f"Error getting feasibility status: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error getting status: {str(e)}"
+            )
     
     def generate_feasibility(
         self,
@@ -164,21 +494,39 @@ class FeasibilityHandler:
         return md_file_paths
     
     def _execute_graph(self, state):
-        """Execute the feasibility graph and return results."""
+        """Execute the feasibility graph and return results (legacy method)."""
         from src.app.feasibility_graph import get_feasibility_graph
         
-        graph = get_feasibility_graph(state)
+        graph = get_feasibility_graph()
+        
+        # Create thread config for checkpointer (required)
+        thread_config = {
+            "configurable": {
+                "thread_id": state.session_id
+            }
+        }
         
         thinking_summary = None
         feasibility_report = None
         
-        for s in graph.stream(state):
+        for s in graph.stream(state, thread_config):
             node_name = next(iter(s))
             data = s[node_name]
             print(f"Completed graph node: {node_name}")
             
-            thinking_summary = data.get("thinking_summary")
-            feasibility_report = data.get("feasibility_report")
+            # Skip interrupt node (HITL gate) - just continue for legacy mode
+            if node_name == "__interrupt__":
+                print("Skipping HITL interrupt for legacy mode")
+                continue
+            
+            # Handle both dict and tuple responses
+            if isinstance(data, dict):
+                thinking_summary = data.get("thinking_summary")
+                feasibility_report = data.get("feasibility_report")
+            elif isinstance(data, tuple):
+                # Tuple format from some LangGraph versions
+                print(f"Received tuple data, skipping...")
+                continue
         
         return thinking_summary, feasibility_report
     
@@ -242,29 +590,43 @@ class FeasibilityHandler:
     def _save_feasibility_files(
         self,
         feasibility_result: Dict[str, str],
-        session_id: str
+        session_id: str,
+        iteration: int = 0
     ) -> tuple:
-        """Save feasibility files to session reports folder."""
+        """Save feasibility files to session reports folder with version numbers (no timestamps)."""
         # Use session-specific reports directory
         session_id_short = session_id[:8]
         output_dir = Path(f"output/session_{session_id_short}/reports")
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Create filename with session ID and timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Use version suffix instead of timestamp
+        version_suffix = f"_v{iteration}"
+        
+        # Validate content before saving
+        thinking_summary = feasibility_result.get("thinking_summary", "")
+        feasibility_report = feasibility_result.get("feasibility_report", "")
+        
+        # Check if content is empty or contains error messages
+        if not thinking_summary or len(thinking_summary) < 100 or "error" in thinking_summary.lower()[:200]:
+            print(f"⚠️  WARNING: Thinking summary appears invalid or empty ({len(thinking_summary)} chars)")
+            thinking_summary = "# ERROR\n\nThinking summary generation failed or returned invalid content."
+        
+        if not feasibility_report or len(feasibility_report) < 500 or "error" in feasibility_report.lower()[:200]:
+            print(f"⚠️  WARNING: Feasibility report appears invalid or empty ({len(feasibility_report)} chars)")
+            feasibility_report = "# ERROR\n\nFeasibility report generation failed or returned invalid content.\n\nPlease check the server logs for details."
         
         # Save thinking summary
-        thinking_filename = f"thinking_summary_{session_id[:8]}_{timestamp}.md"
+        thinking_filename = f"thinking_summary_{session_id[:8]}{version_suffix}.md"
         thinking_path = output_dir / thinking_filename
         with open(thinking_path, "w", encoding="utf-8") as f:
-            f.write(feasibility_result["thinking_summary"])
+            f.write(thinking_summary)
         print(f"Thinking summary saved to: {thinking_path}")
         
         # Save feasibility report
-        report_filename = f"feasibility_report_{session_id[:8]}_{timestamp}.md"
+        report_filename = f"feasibility_report_{session_id[:8]}{version_suffix}.md"
         report_path = output_dir / report_filename
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write(feasibility_result["feasibility_report"])
+            f.write(feasibility_report)
         print(f"Feasibility report saved to: {report_path}")
         
         return thinking_path, report_path

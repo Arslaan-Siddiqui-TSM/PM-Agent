@@ -1,11 +1,67 @@
 import os
 import json
+import time
 from pathlib import Path
 from src.config.llm_config import model
 from rich.console import Console
 
 
 console = Console()
+
+
+# ============================================================================
+# LLM Retry Configuration
+# ============================================================================
+MAX_RETRIES = 3
+INITIAL_RETRY_DELAY = 5  # seconds
+MAX_RETRY_DELAY = 60  # seconds
+
+
+def _invoke_llm_with_retry(prompt: str, stage_name: str = "LLM") -> str:
+    """
+    Invoke LLM with exponential backoff retry logic.
+    
+    Args:
+        prompt: The prompt to send to the LLM
+        stage_name: Name of the stage for logging
+    
+    Returns:
+        LLM response content as string
+    
+    Raises:
+        Exception: If all retries fail
+    """
+    retry_delay = INITIAL_RETRY_DELAY
+    
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            console.print(f"[bold yellow]DEBUG:[/bold yellow] {stage_name} attempt {attempt}/{MAX_RETRIES}")
+            
+            # Invoke LLM
+            result = model.invoke(prompt)
+            content = str(getattr(result, "content", result))
+            
+            console.print(f"[bold green]✓ {stage_name} SUCCESS:[/bold green] Received {len(content)} chars")
+            return content
+            
+        except Exception as e:
+            error_msg = str(e)
+            console.print(f"[bold red]✗ {stage_name} ATTEMPT {attempt} FAILED:[/bold red] {error_msg}")
+            
+            # Check if it's a timeout or gateway error
+            is_timeout = "timeout" in error_msg.lower() or "504" in error_msg or "502" in error_msg
+            
+            if attempt < MAX_RETRIES:
+                # Calculate delay with exponential backoff
+                delay = min(retry_delay * (2 ** (attempt - 1)), MAX_RETRY_DELAY)
+                console.print(f"[bold yellow]⏳ Retrying in {delay} seconds...[/bold yellow]")
+                time.sleep(delay)
+            else:
+                # All retries exhausted
+                console.print(f"[bold red]✗ {stage_name} FAILED:[/bold red] All {MAX_RETRIES} attempts exhausted")
+                raise Exception(f"{stage_name} failed after {MAX_RETRIES} attempts: {error_msg}")
+    
+    raise Exception(f"{stage_name} failed: Unknown error")
 
 
 # ============================================================================
@@ -94,13 +150,83 @@ def _build_stage2_prompt(thinking_summary: str, user_payload: dict, session_id: 
     return full_prompt_stage2
 
 
-def generate_feasibility_questions(context_file_path: str, development_context: dict | None = None, session_id: str = "unknown") -> dict:
+def _generate_revision(revision_context: dict, session_id: str) -> dict:
+    """
+    Generate revised feasibility report based on critique.
+    
+    Args:
+        revision_context: Dict containing previous_report, critique, human_feedback, iteration
+        session_id: Session ID for tracking
+        
+    Returns:
+        dict: Dictionary with 'thinking_summary' and 'feasibility_report'
+    """
+    console.print(f"\n[bold magenta]{'='*60}[/bold magenta]")
+    console.print(f"[bold magenta]REVISION MODE - Iteration {revision_context.get('iteration', '?')}[/bold magenta]")
+    console.print(f"[bold magenta]{'='*60}[/bold magenta]\n")
+    
+    project_root = Path(__file__).parent.parent.parent
+    revise_prompt_path = project_root / "prompts" / "feasibility_revise.txt"
+    
+    console.print(f"[bold yellow]DEBUG:[/bold yellow] Loading revision prompt from: {revise_prompt_path}")
+    
+    try:
+        with open(revise_prompt_path, "r", encoding="utf-8") as f:
+            revise_template = f.read()
+    except FileNotFoundError:
+        console.print(f"[bold red]ERROR:[/bold red] Revision prompt not found at {revise_prompt_path}")
+        return {
+            "thinking_summary": "ERROR: Revision prompt template not found",
+            "feasibility_report": "ERROR: Revision prompt template not found"
+        }
+    
+    # Fill in the revision template
+    revision_prompt = revise_template.format(
+        iteration=revision_context.get('iteration', 0),
+        original_report=revision_context.get('previous_report', ''),
+        critique=revision_context.get('critique', '')
+    )
+    
+    console.print(f"[bold yellow]DEBUG:[/bold yellow] Revision prompt length: {len(revision_prompt)} characters")
+    
+    try:
+        # Generate revised report (with retry)
+        revised_report = _invoke_llm_with_retry(
+            revision_prompt, 
+            f"Revision Generation (Iteration {revision_context.get('iteration', 0)})"
+        )
+        
+        console.print(f"[bold green]✓ REVISION COMPLETE:[/bold green] Revised report: {len(revised_report)} chars")
+        
+        # For revisions, thinking_summary is a brief note about the revision
+        thinking_summary = f"REVISION {revision_context.get('iteration', 0)}: Addressed critique points - {len(revised_report)} chars generated"
+        
+        return {
+            "thinking_summary": thinking_summary,
+            "feasibility_report": revised_report
+        }
+        
+    except Exception as e:
+        console.print(f"[bold red]ERROR:[/bold red] Revision generation failed: {e}")
+        return {
+            "thinking_summary": f"Error generating revision: {e}",
+            "feasibility_report": f"Error generating revision: {e}"
+        }
+
+
+def generate_feasibility_questions(
+    context_file_path: str, 
+    development_context: dict | None = None, 
+    session_id: str = "unknown",
+    revision_context: dict | None = None
+) -> dict:
     """Generate feasibility questions for the Tech Lead review.
 
     Args:
         context_file_path (str): Path to the unified context file containing feasibility report and document content.
         development_context (dict, optional): Development process information from user.
         session_id (str, optional): Session ID for the assessment.
+        revision_context (dict, optional): Context for revision iterations including previous report, critique, and feedback.
 
     Returns:
         dict: Dictionary with keys 'thinking_summary' and 'feasibility_report' containing markdown text.
@@ -108,7 +234,19 @@ def generate_feasibility_questions(context_file_path: str, development_context: 
     console.print(f"[bold yellow]DEBUG:[/bold yellow] Starting feasibility question generation")
     console.print(f"[bold yellow]DEBUG:[/bold yellow] Context file path: {context_file_path}")
     console.print(f"[bold yellow]DEBUG:[/bold yellow] Development context provided: {development_context is not None}")
+    console.print(f"[bold yellow]DEBUG:[/bold yellow] Revision context provided: {revision_context is not None}")
     console.print(f"[bold yellow]DEBUG:[/bold yellow] Session ID: {session_id}")
+    
+    # Check if this is a revision iteration
+    is_revision = revision_context is not None
+    
+    if is_revision:
+        console.print(f"[bold magenta]🔄 REVISION MODE:[/bold magenta] Iteration {revision_context.get('iteration', '?')}")
+        console.print(f"[bold magenta]📝 Critique available:[/bold magenta] {len(revision_context.get('critique', ''))} chars")
+        return _generate_revision(revision_context, session_id)
+    
+    # Original generation path (no revision)
+    console.print(f"[bold green]✨ INITIAL GENERATION MODE[/bold green]")
     
     # Read the unified context file
     try:
@@ -186,15 +324,11 @@ def generate_feasibility_questions(context_file_path: str, development_context: 
     
     try:
         # ============================================================
-        # STAGE 1: Generate thinking summary
+        # STAGE 1: Generate thinking summary (with retry)
         # ============================================================
         console.print(f"\n[bold cyan]═══ STAGE 1: GENERATING THINKING SUMMARY ═══[/bold cyan]")
-        console.print(f"[bold yellow]DEBUG:[/bold yellow] Invoking LLM for Stage 1 (thinking summary)")
         
-        result_stage1 = model.invoke(full_prompt)
-        content_stage1 = str(getattr(result_stage1, "content", result_stage1))
-        
-        console.print(f"[bold green]DEBUG:[/bold green] Stage 1 LLM invocation successful")
+        content_stage1 = _invoke_llm_with_retry(full_prompt, "Stage 1 (Thinking Summary)")
         console.print(f"[bold yellow]DEBUG:[/bold yellow] Stage 1 content length: {len(content_stage1)} characters")
         
         # Extract thinking summary from Stage 1
@@ -202,19 +336,15 @@ def generate_feasibility_questions(context_file_path: str, development_context: 
         console.print(f"[bold green]✓ STAGE 1 COMPLETE:[/bold green] Thinking summary: {len(thinking_summary)} chars")
         
         # ============================================================
-        # STAGE 2: Generate feasibility report from thinking summary
+        # STAGE 2: Generate feasibility report from thinking summary (with retry)
         # ============================================================
         console.print(f"\n[bold cyan]═══ STAGE 2: GENERATING FEASIBILITY REPORT ═══[/bold cyan]")
         console.print(f"[bold yellow]DEBUG:[/bold yellow] Building Stage 2 prompt with thinking summary")
         
         stage2_prompt = _build_stage2_prompt(thinking_summary, user_payload, session_id)
         console.print(f"[bold yellow]DEBUG:[/bold yellow] Stage 2 prompt length: {len(stage2_prompt)} characters")
-        console.print(f"[bold yellow]DEBUG:[/bold yellow] Invoking LLM for Stage 2 (feasibility report)")
         
-        result_stage2 = model.invoke(stage2_prompt)
-        content_stage2 = str(getattr(result_stage2, "content", result_stage2))
-        
-        console.print(f"[bold green]DEBUG:[/bold green] Stage 2 LLM invocation successful")
+        content_stage2 = _invoke_llm_with_retry(stage2_prompt, "Stage 2 (Feasibility Report)")
         console.print(f"[bold yellow]DEBUG:[/bold yellow] Stage 2 content length: {len(content_stage2)} characters")
         
         # Extract feasibility report from Stage 2 (entire response is the report)
@@ -239,33 +369,41 @@ def generate_feasibility_questions(context_file_path: str, development_context: 
 def save_development_context_to_json(
     development_context: dict,
     session_id: str,
-    output_dir: str = "outputs/intermediate"
+    output_dir: str = "output/intermediate"
 ) -> str:
-    """Save development context data to a JSON file.
+    """Save development context data to a JSON file (only once per session).
     
     Args:
         development_context (dict): Dictionary containing form data from frontend
             (methodology, teamSize, timeline, budget, techStack, constraints).
         session_id (str): Session ID associated with this context.
         output_dir (str, optional): Directory to save the JSON file. 
-            Defaults to "outputs/intermediate".
+            Defaults to "output/intermediate".
     
     Returns:
         str: The path to the saved JSON file.
     """
-    console.print(f"[bold yellow]DEBUG:[/bold yellow] Saving development context to JSON")
+    console.print(f"[bold yellow]DEBUG:[/bold yellow] Checking for existing development context")
     console.print(f"[bold yellow]DEBUG:[/bold yellow] Session ID: {session_id}")
-    console.print(f"[bold yellow]DEBUG:[/bold yellow] Output directory: {output_dir}")
     
     import json
     from datetime import datetime
+    from glob import glob
     
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
     
-    # Create filename with session ID and timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    json_filename = f"development_context_{session_id[:8]}_{timestamp}.json"
+    # Check if development context already exists for this session
+    existing_files = glob(os.path.join(output_dir, f"development_context_{session_id[:8]}*.json"))
+    
+    if existing_files:
+        # Reuse existing file
+        json_file_path = existing_files[0]
+        console.print(f"[bold green]✓ Reusing existing development context:[/bold green] {json_file_path}")
+        return json_file_path
+    
+    # Create filename with session ID (no timestamp needed, one per session)
+    json_filename = f"development_context_{session_id[:8]}.json"
     json_file_path = os.path.join(output_dir, json_filename)
     
     # Prepare the JSON data structure
@@ -279,7 +417,7 @@ def save_development_context_to_json(
     with open(json_file_path, "w", encoding="utf-8") as f:
         json.dump(json_data, f, indent=2, ensure_ascii=False)
     
-    console.print(f"[bold green]DEBUG:[/bold green] Development context saved to: {json_file_path}")
+    console.print(f"[bold green]✓ Development context saved to:[/bold green] {json_file_path}")
     return json_file_path
 
 

@@ -3,6 +3,9 @@ import { WORKFLOW_STEPS } from "../constants";
 import {
   uploadFiles,
   checkFeasibility,
+  startFeasibility,
+  reviewFeasibility,
+  getFeasibilityStatus,
   fetchFileContent,
   generatePlan,
 } from "../services";
@@ -70,39 +73,82 @@ export const useProjectWorkflow = () => {
   };
 
   /**
-   * Handle feasibility check
+   * Handle feasibility check with HITL support
+   * @param {boolean} useHitl - Whether to use HITL workflow
+   * @param {boolean} approved - If in review mode, whether report is approved
+   * @param {string} feedback - If requesting changes, the feedback text
    */
-  const handleCheckFeasibility = async () => {
+  const handleCheckFeasibility = async (
+    useHitl = false,
+    approved = null,
+    feedback = null
+  ) => {
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      const data = await checkFeasibility(sessionId, devProcessAnswers);
+      let data;
 
-      // Store file paths
-      if (data.file_path) {
-        setFeasibilityFilePath(data.file_path);
-      }
-      if (data.development_context_json_path) {
-        setDevelopmentContextJsonPath(data.development_context_json_path);
-      }
+      // HITL Mode - Start new assessment
+      if (useHitl && approved === null) {
+        data = await startFeasibility(sessionId, devProcessAnswers);
 
-      // Fetch the feasibility report content
-      if (data.file_path) {
-        try {
-          const content = await fetchFileContent(data.file_path);
-          setFeasibilityReport(content);
-        } catch (err) {
-          console.error("Error fetching file content:", err);
-          setFeasibilityReport(
-            "Feasibility assessment generated successfully. Review the assessment before proceeding."
+        // Store data globally for component access
+        window.__feasibilityData = data;
+
+        setFeasibilityReport(data.feasibility_report || "");
+        setSuccessMessage("Feasibility report generated! Please review.");
+      }
+      // HITL Mode - Submit review decision
+      else if (useHitl && approved !== null) {
+        data = await reviewFeasibility(sessionId, approved, feedback);
+
+        // Store data globally for component access
+        window.__feasibilityData = data;
+
+        if (data.status === "approved") {
+          setSuccessMessage("Feasibility report approved!");
+          setStep(WORKFLOW_STEPS.REVIEW);
+        } else if (data.status === "awaiting_human") {
+          setFeasibilityReport(data.feasibility_report || "");
+          setSuccessMessage(
+            `Revision ${data.iteration} generated! Please review.`
           );
+        } else if (data.status === "max_iterations_reached") {
+          setFeasibilityReport(data.feasibility_report || "");
+          setSuccessMessage("Max iterations reached. Using current report.");
+          setTimeout(() => setStep(WORKFLOW_STEPS.REVIEW), 2000);
         }
       }
+      // Legacy Mode - Single-pass generation
+      else {
+        data = await checkFeasibility(sessionId, devProcessAnswers);
 
-      setSuccessMessage("Feasibility assessment generated successfully!");
-      setStep(WORKFLOW_STEPS.REVIEW);
+        // Store file paths
+        if (data.file_path) {
+          setFeasibilityFilePath(data.file_path);
+        }
+        if (data.development_context_json_path) {
+          setDevelopmentContextJsonPath(data.development_context_json_path);
+        }
+
+        // Fetch the feasibility report content
+        if (data.file_path) {
+          try {
+            const content = await fetchFileContent(data.file_path);
+            setFeasibilityReport(content);
+          } catch (err) {
+            console.error("Error fetching file content:", err);
+            setFeasibilityReport(
+              "Feasibility assessment generated successfully. Review the assessment before proceeding."
+            );
+          }
+        }
+
+        setSuccessMessage("Feasibility assessment generated successfully!");
+        setStep(WORKFLOW_STEPS.REVIEW);
+      }
     } catch (err) {
       setError(err.message);
     } finally {

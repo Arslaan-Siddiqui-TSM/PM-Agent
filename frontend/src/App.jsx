@@ -21,6 +21,7 @@ function App() {
     loading,
     error,
     successMessage,
+    devProcessAnswers,
     feasibilityReport,
     feasibilityFilePath,
     developmentContextJsonPath,
@@ -86,6 +87,8 @@ function App() {
           <FeasibilityStep
             loading={loading}
             onCheckFeasibility={handleCheckFeasibility}
+            sessionId={sessionId}
+            developmentContext={devProcessAnswers}
           />
         )}
 

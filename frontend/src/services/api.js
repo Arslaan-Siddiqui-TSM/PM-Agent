@@ -74,6 +74,83 @@ export const checkFeasibility = async (sessionId, developmentContext) => {
 };
 
 /**
+ * Start feasibility assessment with HITL support (NEW)
+ * @param {string} sessionId - Current session ID
+ * @param {Object} developmentContext - Development process answers
+ * @returns {Promise<{status: string, iteration: number, feasibility_report: string, message: string}>}
+ */
+export const startFeasibility = async (sessionId, developmentContext) => {
+  const response = await fetch(`${API_BASE_URL}/feasibility/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      development_context: developmentContext,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(
+      errorData.detail || "Failed to start feasibility assessment"
+    );
+  }
+
+  return await response.json();
+};
+
+/**
+ * Submit human review decision for feasibility report (NEW)
+ * @param {string} sessionId - Current session ID
+ * @param {boolean} approved - True to approve, false to request changes
+ * @param {string} feedback - Required when approved=false. Feedback for revision.
+ * @returns {Promise<{status: string, iteration: number, feasibility_report: string, message: string}>}
+ */
+export const reviewFeasibility = async (
+  sessionId,
+  approved,
+  feedback = null
+) => {
+  const response = await fetch(`${API_BASE_URL}/feasibility/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      approved: approved,
+      feedback: feedback,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Failed to submit review");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get current status of feasibility assessment workflow (NEW)
+ * @param {string} sessionId - Current session ID
+ * @returns {Promise<{status: string, iteration: number, feasibility_report: string, critique: string}>}
+ */
+export const getFeasibilityStatus = async (sessionId) => {
+  const response = await fetch(
+    `${API_BASE_URL}/feasibility/status/${sessionId}`,
+    {
+      method: "GET",
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Failed to get feasibility status");
+  }
+
+  return await response.json();
+};
+
+/**
  * Fetch file content from the server
  * @param {string} filePath - Path to the file
  * @returns {Promise<string>}

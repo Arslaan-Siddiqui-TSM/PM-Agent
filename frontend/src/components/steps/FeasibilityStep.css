@@ -1,1 +1,269 @@
-/* Feasibility step styles are inherited from App.css */
+/* Feasibility Step - HITL Support */
+
+.feasibility-step {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* HITL Review Section */
+.hitl-review-section {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Iteration Counter */
+.iteration-counter {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.iteration-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Report Display */
+.report-display {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.report-display h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #2d3748;
+  font-size: 1.25rem;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.5rem;
+}
+
+.report-content {
+  max-height: 500px;
+  overflow-y: auto;
+  background: #f7fafc;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.report-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #2d3748;
+}
+
+/* Critique Display */
+.critique-display {
+  background: #fffaf0;
+  border: 1px solid #fbd38d;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(251, 211, 141, 0.2);
+}
+
+.critique-display h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #744210;
+  font-size: 1.25rem;
+  border-bottom: 2px solid #ed8936;
+  padding-bottom: 0.5rem;
+}
+
+.critique-content {
+  max-height: 400px;
+  overflow-y: auto;
+  background: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #fbd38d;
+}
+
+.critique-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #744210;
+}
+
+/* Review Controls */
+.review-controls {
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.review-controls h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #2d3748;
+  font-size: 1.25rem;
+}
+
+.review-controls > p {
+  color: #4a5568;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+/* Feedback Section */
+.feedback-section {
+  margin-bottom: 1.5rem;
+}
+
+.feedback-section label {
+  display: block;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.feedback-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #cbd5e0;
+  border-radius: 6px;
+  font-family: "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.feedback-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.feedback-textarea::placeholder {
+  color: #a0aec0;
+  font-style: italic;
+}
+
+/* Review Buttons */
+.review-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.review-buttons button {
+  min-width: 180px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.secondary-button {
+  background: #718096;
+  color: white;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: #4a5568;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(113, 128, 150, 0.3);
+}
+
+.warning-button {
+  background: #ed8936;
+  color: white;
+}
+
+.warning-button:hover:not(:disabled) {
+  background: #dd6b20;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+}
+
+.success-button {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+}
+
+.success-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+}
+
+.review-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Status Messages */
+.status-message {
+  padding: 1rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.status-message.loading {
+  background: #ebf8ff;
+  color: #2c5282;
+  border: 1px solid #90cdf4;
+}
+
+.status-message.success {
+  background: #f0fff4;
+  color: #22543d;
+  border: 1px solid #9ae6b4;
+}
+
+.status-message.warning {
+  background: #fffaf0;
+  color: #744210;
+  border: 1px solid #fbd38d;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .review-buttons {
+    flex-direction: column;
+  }
+
+  .review-buttons button {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .iteration-counter {
+    justify-content: center;
+  }
+
+  .report-content,
+  .critique-content {
+    max-height: 300px;
+  }
+}

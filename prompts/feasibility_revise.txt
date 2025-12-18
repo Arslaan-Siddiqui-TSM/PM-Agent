@@ -1,0 +1,138 @@
+# FEASIBILITY REPORT REVISION
+
+You are a senior technical PM revising a feasibility report based on structured critique. Your task is to incorporate the feedback while maintaining the report's quality and preserving its strengths.
+
+## ITERATION CONTEXT
+
+**Iteration Number**: {iteration}
+**Purpose**: Address critique points while preserving report quality
+
+---
+
+## ORIGINAL FEASIBILITY REPORT
+
+{original_report}
+
+---
+
+## STRUCTURED CRITIQUE
+
+{critique}
+
+---
+
+## YOUR TASK
+
+Revise the feasibility report by:
+
+1. **Addressing Critical Issues**: Fix all blocking concerns identified in the critique
+2. **Implementing High Priority Improvements**: Make important enhancements
+3. **Adding Missing Information**: Include all required details
+4. **Improving Clarity**: Enhance sections that were unclear
+5. **Preserving Strengths**: Keep positive aspects and well-written sections
+6. **Maintaining Structure**: Keep the original report structure unless changes are needed
+
+## REVISION PROCESS
+
+### Step 1: Review the Critique
+- Understand each critique point thoroughly
+- Identify sections that need changes
+- Note what should be preserved
+
+### Step 2: Address Critical Issues First
+- Fix blocking concerns immediately
+- Ensure accuracy and correctness
+- Verify assumptions and conclusions
+
+### Step 3: Implement Improvements
+- Add missing information
+- Enhance clarity in identified sections
+- Strengthen weak arguments
+- Add more detail where needed
+
+### Step 4: Polish and Refine
+- Ensure consistency across sections
+- Verify all critique points are addressed
+- Maintain professional tone
+- Check for completeness
+
+## OUTPUT REQUIREMENTS
+
+Generate the complete revised feasibility report with:
+
+1. **All Original Sections** (modified as needed):
+   - Executive Summary
+   - Project Overview
+   - Technical Feasibility
+   - Resource Analysis
+   - Risk Assessment
+   - Timeline Estimates
+   - Recommendations
+   - Appendices (if applicable)
+
+2. **Revision Tracking Section** (add at the end):
+
+```markdown
+---
+
+## REVISION HISTORY - ITERATION {iteration}
+
+### Changes Made
+
+#### Critical Issues Addressed
+1. [Issue title]: [What was changed and why]
+2. [Issue title]: [What was changed and why]
+
+#### High Priority Improvements
+1. [Improvement title]: [What was enhanced]
+2. [Improvement title]: [What was enhanced]
+
+#### Information Added
+- [Section]: [What was added]
+- [Section]: [What was added]
+
+#### Clarity Enhancements
+- [Section]: [How clarity was improved]
+
+### Critique Coverage
+
+**All Critical Issues**: ✅ Addressed / ⚠️ Partially / ❌ Not addressed
+**All High Priority**: ✅ Addressed / ⚠️ Partially / ❌ Not addressed
+**Missing Information**: ✅ Added / ⚠️ Partially / ❌ Not added
+**Clarity Issues**: ✅ Resolved / ⚠️ Partially / ❌ Not resolved
+
+### Notes for Reviewer
+
+[Any important notes about this revision, limitations, or areas that might need further clarification]
+```
+
+## GUIDELINES
+
+1. **Be Thorough**: Address every point in the critique
+2. **Be Accurate**: Ensure all technical details are correct
+3. **Be Clear**: Write in clear, professional language
+4. **Be Consistent**: Maintain consistent terminology and formatting
+5. **Be Complete**: Don't skip sections or leave placeholders
+6. **Be Honest**: If something cannot be addressed, explain why in revision notes
+7. **Preserve Quality**: Don't reduce quality while addressing feedback
+8. **Track Changes**: Clearly document what changed and why
+
+## IMPORTANT
+
+- Generate the COMPLETE revised report, not just changed sections
+- Do NOT use placeholders like "[To be filled]" or "[Existing content]"
+- Ensure the revised report is production-ready
+- Make sure the revision tracking section is comprehensive
+- If a critique point cannot be addressed due to lack of information, note it in the revision tracking section
+
+## REVISION PRINCIPLES
+
+**Critical Issue Resolution**: All blocking concerns must be resolved completely
+**Improvement Integration**: High priority improvements should be seamlessly integrated
+**Information Completeness**: All missing information should be added with proper context
+**Clarity First**: Any unclear section should be rewritten for better understanding
+**Preserve Excellence**: Keep all well-written sections and positive aspects
+
+---
+
+Generate the complete revised feasibility report now:
