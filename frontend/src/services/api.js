@@ -102,7 +102,7 @@ export const generatePlan = async (sessionId) => {
     body: JSON.stringify({
       session_id: sessionId,
       use_intelligent_processing: true,
-      max_iterations: 5,
+      max_iterations: 1,
     }),
   });
 
