@@ -164,6 +164,118 @@ For each role: name, responsibilities, time allocation, key skills
 #### 3.3 RACI Matrix
 For key deliverables and decisions
 
+#### 3.3 RACI Matrix
+
+Create a comprehensive RACI matrix defining accountability and involvement for key activities, decisions, and deliverables. The matrix ensures clarity on who does what and prevents accountability gaps.
+
+**RACI Definitions:**
+- **R (Responsible)**: Does the work / performs the task (can be multiple people)
+- **A (Accountable)**: Takes ownership / signs off / is ultimately answerable (must be ONE person)
+- **C (Consulted)**: Provides input / gives expert advice (two-way communication)
+- **I (Informed)**: Kept updated / receives status notifications (one-way communication)
+
+**Matrix Structure:**
+| Activity / Deliverable | Responsible | Accountable | Consulted | Informed |
+|---|---|---|---|---|
+| [Activity Name] | [Team/Person] | [Decision Maker] | [Stakeholders] | [Other Teams] |
+
+**Activities to Include in RACI:**
+
+1. **Planning & Requirements**:
+  - Requirements Finalization & Sign-off
+  - Scope Definition & Approval
+  - Feasibility Assessment & Validation
+  - Assumptions, Constraints & Dependencies Approval
+
+2. **Architecture & Design**:
+  - Architecture Design & Approval
+  - Technology Stack Selection Approval
+  - Integration Design Approval
+  - Security Architecture Review & Approval
+
+3. **Execution Control** (Governed, Not Execution Tasks):
+  - Sprint Planning Approval
+  - Development Phase Completion Review
+  - Code Review Approval
+  - Build Readiness Confirmation
+
+4. **Quality & Validation**:
+  - Test Strategy Approval
+  - Test Execution Completion Sign-off
+  - Performance Testing Approval
+  - UAT Execution & Acceptance
+  - Production Readiness Review
+
+5. **Release & Deployment**:
+  - Deployment Plan Approval
+  - Production Deployment
+  - Release Approval
+  - Post-Deployment Validation
+
+6. **Change & Risk Management**:
+  - Risk Identification & Ownership Assignment
+  - Risk Response Approval
+  - Change Request Submission
+  - Change Request Approval
+  - Post-Change Validation
+
+7. **Monitoring & Communication**:
+  - Project Status Reporting & Approval
+  - Issue Escalation Decision
+  - Stakeholder Communication Approval
+
+8. **Closure & Handover**:
+  - Documentation Completion & Approval
+  - Knowledge Transfer / Training Completion
+  - Project Closure & Sign-off
+
+**Example RACI Matrix:**
+
+| Activity / Deliverable | Project Lead / PM | Business Owner | Tech Lead / Architect | QA Lead | DevOps / Release Mgr | Development Team | Stakeholders |
+|---|---|---|---|---|---|---|---|
+| Requirements Finalization & Sign-off | R | **A** | C | I | I | C | I |
+| Scope Definition & Approval | R | **A** | C | - | - | I | I |
+| Feasibility Assessment & Validation | R, C | **A** | R | - | C | I | I |
+| Architecture Design & Approval | I | C | **A** | I | C | R | I |
+| Technology Stack Selection Approval | C | C | **A** | I | C | - | - |
+| Sprint Planning Approval (Agile) | R | C | **A** | C | - | R | I |
+| Development Phase Completion Review | I | - | C | R | **A** | R | I |
+| Code Review Approval | I | - | **A** | - | - | R | - |
+| Test Strategy Approval | C | C | - | **A** | I | C | I |
+| Test Execution Completion Sign-off | - | - | I | **A** | I | I | - |
+| UAT Execution & Acceptance | R | **A** | I | C | I | - | C |
+| Production Readiness Review | C | C | R | **A** | R | I | - |
+| Deployment Plan Approval | I | - | C | - | **A** | - | - |
+| Production Deployment | - | - | - | - | **A** | I | - |
+| Release Approval | - | **A** | C | C | R | - | C |
+| Post-Deployment Validation | C | I | - | **A** | R | I | I |
+| Risk Identification & Ownership Assignment | **A** | C | C | C | C | C | I |
+| Risk Response Approval | R | **A** | C | C | C | - | I |
+| Change Request Approval | C | **A** | C | C | I | - | I |
+| Change Request Implementation | I | - | I | R | R | **A** | - |
+| Post-Change Validation | C | - | I | **A** | I | I | - |
+| Project Status Reporting & Approval | **A** | R | I | I | I | I | R |
+| Issue Escalation Decision | **A** | C | C | C | C | I | I |
+| Documentation Completion & Approval | R | **A** | C | I | I | R | I |
+| Knowledge Transfer / Training Completion | **A** | C | C | - | - | R | I |
+| Project Closure & Sign-off | R | **A** | I | I | I | I | C |
+
+**RACI Legend:**
+- **R** = Responsible (does the work)
+- **A** = Accountable (owns the deliverable, final sign-off)
+- **C** = Consulted (provides input, two-way communication)
+- **I** = Informed (kept updated, one-way communication)
+- **-** = No involvement
+
+**Key Guidelines:**
+- Every major activity must have exactly ONE person marked as **A (Accountable)**
+- Don't over-assign; keep Responsible to 1-3 people
+- Consulted should be limited to those with critical input (2-way dialogue)
+- Informed should be broader but not overwhelming
+- Ensure coverage of all project lifecycle stages
+- Cross-functional activities should show clear handoff points
+- Update RACI when team composition changes
+
 #### 3.4 Stakeholder Map
 Stakeholder | Role | Interest Level | Influence | Communication Need
 

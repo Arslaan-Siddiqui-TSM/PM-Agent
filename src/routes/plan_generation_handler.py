@@ -41,7 +41,7 @@ class PlanGenerationHandler:
     def generate_plan(
         self,
         session: Session,
-        max_iterations: int = 5
+        max_iterations: int = 1
     ) -> dict:
         """
         Generate project plan using reflection loop.

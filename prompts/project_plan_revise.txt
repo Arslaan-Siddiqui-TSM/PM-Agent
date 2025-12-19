@@ -230,10 +230,15 @@ Your task is to DECIDE whether to accept the current draft or request revisions.
 {{
   "decision": "accept" or "revise",
   "rationale": "Brief explanation of your decision (2-3 sentences)",
-  "required_actions": "Detailed, prioritized list of specific changes needed (empty string if accepting)"
+  "required_actions": "Detailed, prioritized list of specific changes needed (empty string if accepting). Use \\n for line breaks. Escape any quotes with \\\""
 }}
 
-**DO NOT wrap the JSON in ```json code fences. Return ONLY the raw JSON.**
+**IMPORTANT JSON RULES**:
+- **DO NOT wrap the JSON in ```json code fences. Return ONLY the raw JSON.**
+- Use \\n for line breaks in strings (not actual line breaks)
+- Escape all internal quotes with \\\"
+- required_actions should be a SINGLE STRING with \\n separators, NOT an array
+- No trailing commas
 
 ### Decision Criteria:
 

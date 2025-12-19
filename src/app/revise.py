@@ -104,19 +104,59 @@ def _safe_parse_json(payload: str) -> Dict[str, str]:
     # Extract ONLY what's between the braces (inclusive)
     json_str = payload[json_start : json_end + 1].strip()
     
-    # Step 4: Try to parse
+    # Step 4: Try to parse with standard parser first
     try:
-        return json.loads(json_str)
+        parsed = json.loads(json_str)
+        
+        # Normalize required_actions to string if it's a list
+        if "required_actions" in parsed:
+            if isinstance(parsed["required_actions"], list):
+                # Convert array to numbered string
+                actions_list = parsed["required_actions"]
+                parsed["required_actions"] = "\n".join(
+                    f"{i+1}. {action}" for i, action in enumerate(actions_list)
+                )
+        
+        return parsed
+        
     except json.JSONDecodeError as e:
-        # Still failed - show detailed debug info
+        # Try repair strategies before giving up
         print(f"\n{'='*80}", flush=True)
-        print(f"JSON PARSE ERROR AFTER EXTRACTION", flush=True)
+        print(f"JSON PARSE ERROR - ATTEMPTING REPAIR", flush=True)
         print(f"{'='*80}", flush=True)
+        print(f"Error at position {e.pos}: {str(e)}", flush=True)
+        
+        # Strategy 1: Try to find and print the problematic area
+        if hasattr(e, 'pos') and e.pos:
+            error_start = max(0, e.pos - 100)
+            error_end = min(len(json_str), e.pos + 100)
+            print(f"Context around error:\n{json_str[error_start:error_end]}", flush=True)
+        
+        # Strategy 2: Try relaxed JSON5-style parsing (handle trailing commas, etc)
+        try:
+            # Remove trailing commas before closing brackets/braces
+            import re
+            repaired = re.sub(r',\s*(\]|\})', r'\1', json_str)
+            parsed = json.loads(repaired)
+            print(f"✓ Repaired JSON successfully!", flush=True)
+            print(f"{'='*80}\n", flush=True)
+            
+            # Normalize required_actions
+            if "required_actions" in parsed and isinstance(parsed["required_actions"], list):
+                actions_list = parsed["required_actions"]
+                parsed["required_actions"] = "\n".join(
+                    f"{i+1}. {action}" for i, action in enumerate(actions_list)
+                )
+            
+            return parsed
+        except:
+            pass
+        
+        # Still failed - show detailed debug info
+        print(f"❌ Repair failed", flush=True)
         print(f"Original payload (first 500 chars):\n{original_payload[:500]}\n", flush=True)
         print(f"Extracted JSON (first 500 chars):\n{json_str[:500]}", flush=True)
         print(f"Extracted JSON (last 200 chars):\n{json_str[-200:]}", flush=True)
-        print(f"Error: {str(e)}", flush=True)
-        print(f"Error position: {e.pos if hasattr(e, 'pos') else 'N/A'}", flush=True)
         print(f"{'='*80}\n", flush=True)
         raise ValueError(f"JSON parse failed: {str(e)}")
 

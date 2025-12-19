@@ -40,7 +40,7 @@ class FeasibilityRequest(BaseModel):
 class GeneratePlanRequest(BaseModel):
     session_id: str = Field(..., description="Session ID from upload response")
     use_intelligent_processing: bool = Field(True, description="Use Document Intelligence Pipeline for processing")
-    max_iterations: int = Field(5, description="Maximum number of reflection iterations (default: 5)", ge=1, le=10)
+    max_iterations: int = Field(1, description="Maximum number of reflection iterations (default: 1)", ge=1, le=10)
 
 
 class GeneratePlanResponse(BaseModel):
