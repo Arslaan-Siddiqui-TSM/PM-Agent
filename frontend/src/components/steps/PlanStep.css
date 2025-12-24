@@ -1,1 +1,62 @@
-/* Plan step styles are inherited from App.css */
+/* Plan step styles */
+
+.success-message {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  color: #155724;
+}
+
+.file-path {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+}
+
+.file-path code {
+  background-color: #f8f9fa;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.plan-preview {
+  margin-bottom: 2rem;
+}
+
+.diagram-generation-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #007bff;
+}
+
+.diagram-generation-section h3 {
+  margin: 0 0 1rem 0;
+  color: #2c3e50;
+}
+
+.diagram-generation-section p {
+  margin-bottom: 1.5rem;
+  color: #6c757d;
+  line-height: 1.6;
+}
+
+.diagrams-generated {
+  margin-top: 1.5rem;
+}
+
+.success-text {
+  color: #28a745;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.action-buttons {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}

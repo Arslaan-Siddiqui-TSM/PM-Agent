@@ -5,6 +5,7 @@ import {
   checkFeasibility,
   fetchFileContent,
   generatePlan,
+  generateDiagrams,
 } from "../services";
 
 const INITIAL_DEV_PROCESS_ANSWERS = {
@@ -37,6 +38,10 @@ export const useProjectWorkflow = () => {
   // Step 5: Plan data
   const [finalPlan, setFinalPlan] = useState("");
   const [planFilePath, setPlanFilePath] = useState("");
+
+  // Diagram generation data
+  const [diagrams, setDiagrams] = useState([]);
+  const [diagramsLoading, setDiagramsLoading] = useState(false);
 
   /**
    * Handle file upload
@@ -132,6 +137,26 @@ export const useProjectWorkflow = () => {
   };
 
   /**
+   * Handle diagram generation
+   */
+  const handleGenerateDiagrams = async () => {
+    setDiagramsLoading(true);
+    setError(null);
+
+    try {
+      const data = await generateDiagrams(sessionId, finalPlan);
+      setDiagrams(data.diagrams);
+      setSuccessMessage(
+        `Successfully generated ${data.diagrams_count} diagram(s)!`
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDiagramsLoading(false);
+    }
+  };
+
+  /**
    * Reset the entire workflow
    */
   const handleReset = () => {
@@ -143,6 +168,8 @@ export const useProjectWorkflow = () => {
     setDevelopmentContextJsonPath("");
     setFinalPlan("");
     setPlanFilePath("");
+    setDiagrams([]);
+    setDiagramsLoading(false);
     setError(null);
   };
 
@@ -159,12 +186,15 @@ export const useProjectWorkflow = () => {
     developmentContextJsonPath,
     finalPlan,
     planFilePath,
+    diagrams,
+    diagramsLoading,
 
     // Actions
     handleUpload,
     handleDevelopmentProcessSubmit,
     handleCheckFeasibility,
     handleGeneratePlan,
+    handleGenerateDiagrams,
     handleReset,
     setError,
     setSuccessMessage,

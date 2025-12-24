@@ -26,10 +26,13 @@ function App() {
     developmentContextJsonPath,
     finalPlan,
     planFilePath,
+    diagrams,
+    diagramsLoading,
     handleUpload,
     handleDevelopmentProcessSubmit,
     handleCheckFeasibility,
     handleGeneratePlan,
+    handleGenerateDiagrams,
     handleReset,
     setError,
     setSuccessMessage,
@@ -103,6 +106,9 @@ function App() {
           <PlanStep
             finalPlan={finalPlan}
             planFilePath={planFilePath}
+            diagrams={diagrams}
+            diagramsLoading={diagramsLoading}
+            onGenerateDiagrams={handleGenerateDiagrams}
             onReset={handleReset}
           />
         )}

@@ -18,6 +18,7 @@ dependencies = [
     "langchain-openai>=0.3.35",
     "langchain-nvidia-ai-endpoints>=0.3.0",
     "unstructured>=0.18.15",
+    "graphviz>=0.21",
 ]
 
 [tool.uv.workspace]

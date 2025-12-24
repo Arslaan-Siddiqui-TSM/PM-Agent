@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.routes.planning_agent import router as agent_router
 from src.routes.utils_endpoints import router as utils_router
 from src.routes.health_check import router as health_router
+from src.routes.diagram_controller import router as diagram_router
+from src.routes.gantt_controller import router as gantt_router
+from src.routes.wbs_controller import router as wbs_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -24,6 +27,9 @@ app.add_middleware(
 app.include_router(agent_router, prefix="/api", tags=["agent"])
 app.include_router(utils_router, prefix="/api", tags=["utils"])
 app.include_router(health_router, prefix="/health", tags=["health"])
+app.include_router(diagram_router, tags=["diagrams"])
+app.include_router(gantt_router, tags=["gantt"])
+app.include_router(wbs_router, tags=["wbs"])
 
 
 @app.get("/")

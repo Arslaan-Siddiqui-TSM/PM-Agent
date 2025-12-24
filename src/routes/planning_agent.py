@@ -55,6 +55,26 @@ class GeneratePlanResponse(BaseModel):
     status: str = Field(description="Status of plan generation (completed/partial)")
 
 
+class GenerateDiagramsRequest(BaseModel):
+    session_id: str = Field(..., description="Session ID from upload response")
+    plan_text: str = Field(..., description="The project plan text to generate diagrams from")
+
+
+class DiagramData(BaseModel):
+    type: str
+    title: str
+    description: str
+    url: str
+    source_code: str
+
+
+class GenerateDiagramsResponse(BaseModel):
+    session_id: str
+    diagrams: List[DiagramData]
+    diagrams_count: int
+    status: str
+
+
 # ============================================================================
 # Endpoint 1: Upload Documents (Creates Session)
 # ============================================================================
@@ -290,3 +310,87 @@ async def generate_plan(request: GeneratePlanRequest):
         iterations_completed=result["iterations_completed"],
         status=result["status"]
     )
+
+
+# ============================================================================
+# Endpoint 4: Generate Diagrams from Plan
+# ============================================================================
+
+@router.post("/generate-diagrams", response_model=GenerateDiagramsResponse)
+async def generate_diagrams(request: GenerateDiagramsRequest):
+    """
+    Generate visual diagrams from a project plan.
+    
+    This endpoint uses the DiagramGenerator agent to analyze the plan and create
+    visual representations (Gantt charts, WBS diagrams, etc.) using direct rendering services.
+    """
+    # Get session
+    session = sessions.get(request.session_id)
+    if not session:
+        print(f"Session not found: {request.session_id}")
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found."
+        )
+    
+    if session.is_expired():
+        print(f"Session expired: {request.session_id}")
+        raise HTTPException(
+            status_code=410,
+            detail="Session expired."
+        )
+    
+    print(f"Generating diagrams for session: {request.session_id}")
+    
+    try:
+        # Import DiagramGenerator
+        from src.agents.diagram_generator import DiagramGenerator
+        
+        # Initialize the diagram generator
+        diagram_gen = DiagramGenerator()
+        
+        # Generate diagrams from plan
+        diagrams = await diagram_gen.generate_all_diagrams(
+            plan_text=request.plan_text,
+            diagram_types=None,  # Auto-detect
+            format="svg",
+            include_failed=True  # Include failed diagrams with source code for debugging
+        )
+        
+        # Close the HTTP client
+        await diagram_gen.close()
+        
+        # Convert to response format
+        diagram_data_list = [
+            DiagramData(
+                type=d.type,
+                title=d.title,
+                description=d.description,
+                url=d.url,
+                source_code=d.source_code
+            )
+            for d in diagrams
+        ]
+        
+        success_count = len(diagram_data_list)
+        print(f"Successfully generated {success_count} diagrams")
+        
+        # Add a warning if no diagrams were generated
+        status = "completed"
+        if success_count == 0:
+            status = "completed_with_errors"
+            print("WARNING: No diagrams were successfully generated. This may be due to rendering service issues.")
+        
+        return GenerateDiagramsResponse(
+            session_id=request.session_id,
+            diagrams=diagram_data_list,
+            diagrams_count=success_count,
+            status=status
+        )
+        
+    except Exception as e:
+        print(f"Error during diagram generation: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Diagram generation failed: {str(e)}"
+        )

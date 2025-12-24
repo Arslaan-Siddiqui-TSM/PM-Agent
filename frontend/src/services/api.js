@@ -102,13 +102,37 @@ export const generatePlan = async (sessionId) => {
     body: JSON.stringify({
       session_id: sessionId,
       use_intelligent_processing: true,
-      max_iterations: 5,
+      max_iterations: 1,
     }),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || "Plan generation failed");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Generate diagrams from project plan
+ * @param {string} sessionId - Current session ID
+ * @param {string} planText - The project plan text to generate diagrams from
+ * @returns {Promise<{diagrams: Array, diagrams_count: number, status: string}>}
+ */
+export const generateDiagrams = async (sessionId, planText) => {
+  const response = await fetch(`${API_BASE_URL}/generate-diagrams`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      plan_text: planText,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Diagram generation failed");
   }
 
   return await response.json();
