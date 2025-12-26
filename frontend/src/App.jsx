@@ -9,6 +9,7 @@ import {
   FeasibilityStep,
   ReviewStep,
   PlanStep,
+  HITLReviewStep,
 } from "./components/steps";
 import { useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
@@ -26,13 +27,22 @@ function App() {
     developmentContextJsonPath,
     finalPlan,
     planFilePath,
+    // HITL state
+    enableHITL,
+    hitlReviewData,
+    hitlReviewType,
+    hitlIteration,
+    // Actions
     handleUpload,
     handleDevelopmentProcessSubmit,
     handleCheckFeasibility,
     handleGeneratePlan,
+    handleGeneratePlanWithHITL,
+    handleSubmitReview,
     handleReset,
     setError,
     setSuccessMessage,
+    toggleHITL,
   } = useProjectWorkflow();
 
   // Show error toasts
@@ -68,7 +78,7 @@ function App() {
 
       <Header />
 
-      <ProgressBar currentStep={step} />
+      <ProgressBar currentStep={step} enableHITL={enableHITL} />
 
       <main className="main-content">
         {step === WORKFLOW_STEPS.UPLOAD && (
@@ -95,7 +105,31 @@ function App() {
             feasibilityReport={feasibilityReport}
             feasibilityFilePath={feasibilityFilePath}
             developmentContextJsonPath={developmentContextJsonPath}
-            onGeneratePlan={handleGeneratePlan}
+            enableHITL={enableHITL}
+            onToggleHITL={toggleHITL}
+            onGeneratePlan={
+              enableHITL ? handleGeneratePlanWithHITL : handleGeneratePlan
+            }
+          />
+        )}
+
+        {step === WORKFLOW_STEPS.HITL_DRAFT_REVIEW && (
+          <HITLReviewStep
+            reviewType={hitlReviewType}
+            reviewData={hitlReviewData}
+            iteration={hitlIteration}
+            loading={loading}
+            onSubmitReview={handleSubmitReview}
+          />
+        )}
+
+        {step === WORKFLOW_STEPS.HITL_REFLECTION_REVIEW && (
+          <HITLReviewStep
+            reviewType={hitlReviewType}
+            reviewData={hitlReviewData}
+            iteration={hitlIteration}
+            loading={loading}
+            onSubmitReview={handleSubmitReview}
           />
         )}
 

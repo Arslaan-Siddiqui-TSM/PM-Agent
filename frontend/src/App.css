@@ -1,3 +1,41 @@
+:root {
+  /* Primary colors */
+  --primary-color: #667eea;
+  --primary-dark: #5a67d8;
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  /* Text colors */
+  --text-primary: #1a202c;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  /* Background colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #e2e8f0;
+  --bg-code: #fafafa;
+
+  /* Border colors */
+  --border-color: #e2e8f0;
+
+  /* Status colors */
+  --success-bg: #d1fae5;
+  --success-text: #065f46;
+  --success-color: #10b981;
+
+  --warning-bg: #fef3c7;
+  --warning-text: #92400e;
+  --warning-border: #fcd34d;
+
+  --error-bg: #fee2e2;
+  --error-text: #991b1b;
+  --error-color: #ef4444;
+
+  --info-bg: #dbeafe;
+  --info-text: #1e40af;
+  --info-border: #bfdbfe;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -67,9 +105,13 @@
   padding: 3rem;
   border-radius: 15px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  max-width: 800px;
+  max-width: 900px;
   width: 100%;
   animation: fadeIn 0.5s ease;
+}
+
+.step-container.hitl-review-step {
+  max-width: 1000px;
 }
 
 @keyframes fadeIn {
