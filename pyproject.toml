@@ -3,9 +3,10 @@ name = "rewoo-demonstration"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.120.1",
+    "fastapi-cli>=0.0.14",
     "langchain-community>=0.3.31",
     "langchain-google-genai>=2.1.12",
     "langchain-tavily>=0.2.12",

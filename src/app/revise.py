@@ -118,7 +118,19 @@ def _safe_parse_json(payload: str) -> Dict[str, str]:
 
     # Step 4: Try to parse
     try:
-        return json.loads(json_str)
+        parsed = json.loads(json_str)
+        
+        # Normalize required_actions to string if it's a list
+        if "required_actions" in parsed:
+            if isinstance(parsed["required_actions"], list):
+                # Convert array to numbered string
+                actions_list = parsed["required_actions"]
+                parsed["required_actions"] = "\n".join(
+                    f"{i+1}. {action}" for i, action in enumerate(actions_list)
+                )
+        
+        return parsed
+        
     except json.JSONDecodeError as e:
         # Still failed - show detailed debug info
         print(f"\n{'=' * 80}", flush=True)
