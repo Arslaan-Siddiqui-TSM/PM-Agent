@@ -1,1 +1,161 @@
-/* Progress bar styles are inherited from App.css */
+/* Progress Bar Styles */
+
+.progress-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.progress-bar.hitl-mode {
+  gap: 0;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 0 8px;
+}
+
+.step-indicator {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+/* Pending state */
+.progress-step.pending .step-indicator {
+  background: #e2e8f0;
+  color: #94a3b8;
+  border: 2px solid #cbd5e1;
+}
+
+/* Active state */
+.progress-step.active .step-indicator {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: 2px solid transparent;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  transform: scale(1.1);
+}
+
+/* Complete state */
+.progress-step.complete .step-indicator {
+  background: #10b981;
+  color: white;
+  border: 2px solid transparent;
+}
+
+.check-icon {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.step-number {
+  font-size: 0.85rem;
+}
+
+.step-label {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color 0.3s ease;
+}
+
+.progress-step.pending .step-label {
+  color: #94a3b8;
+}
+
+.progress-step.active .step-label {
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.progress-step.complete .step-label {
+  color: #10b981;
+}
+
+/* Connector line */
+.step-connector {
+  width: 40px;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 4px;
+  transition: background 0.3s ease;
+}
+
+.progress-step.complete .step-connector {
+  background: #10b981;
+}
+
+.progress-step.active .step-connector {
+  background: linear-gradient(90deg, #667eea 0%, #e2e8f0 100%);
+}
+
+/* HITL mode adjustments */
+.progress-bar.hitl-mode .step-label {
+  font-size: 0.8rem;
+}
+
+.progress-bar.hitl-mode .step-connector {
+  width: 24px;
+}
+
+.progress-bar.hitl-mode .progress-step {
+  padding: 0 4px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .progress-bar {
+    padding: 16px 12px;
+    gap: 4px;
+  }
+
+  .step-label {
+    display: none;
+  }
+
+  .step-indicator {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .step-connector {
+    width: 20px;
+  }
+
+  .progress-bar.hitl-mode .step-connector {
+    width: 12px;
+  }
+}
+
+@media (max-width: 500px) {
+  .step-connector {
+    width: 12px;
+  }
+
+  .progress-bar.hitl-mode .step-connector {
+    width: 8px;
+  }
+
+  .step-indicator {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+}

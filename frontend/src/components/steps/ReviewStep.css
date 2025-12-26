@@ -46,3 +46,125 @@
   opacity: 1;
   font-style: italic;
 }
+
+/* HITL Toggle Section */
+.hitl-toggle-section {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 30px 0;
+  border: 2px solid #e2e8f0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hitl-toggle-section:has(input:checked) {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+}
+
+.hitl-toggle-header {
+  margin-bottom: 16px;
+}
+
+.hitl-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hitl-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.hitl-toggle input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.hitl-toggle input:checked + .toggle-slider::before {
+  transform: translateX(24px);
+}
+
+.toggle-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.hitl-info {
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.hitl-enabled-info,
+.hitl-disabled-info {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.hitl-enabled-info p:first-child,
+.hitl-disabled-info p:first-child {
+  margin: 0 0 12px 0;
+  color: #1e293b;
+}
+
+.hitl-enabled-info p:nth-child(2) {
+  margin: 0 0 8px 0;
+  color: #475569;
+}
+
+.hitl-enabled-info ul {
+  margin: 0 0 12px 0;
+  padding-left: 8px;
+  list-style: none;
+}
+
+.hitl-enabled-info li {
+  padding: 6px 0;
+  color: #475569;
+}
+
+.hitl-enabled-info li strong {
+  color: #1e293b;
+}
+
+.hitl-tip {
+  margin: 0;
+  padding: 10px 14px;
+  background: #fef9c3;
+  border-radius: 6px;
+  color: #854d0e;
+  font-size: 0.9rem;
+}
+
+.hitl-disabled-info p:last-child {
+  margin: 0;
+  color: #64748b;
+}

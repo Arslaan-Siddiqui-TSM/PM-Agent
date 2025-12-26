@@ -91,7 +91,7 @@ export const fetchFileContent = async (filePath) => {
 };
 
 /**
- * Generate final project plan
+ * Generate final project plan (standard mode without HITL)
  * @param {string} sessionId - Current session ID
  * @returns {Promise<{result: string, file_path: string}>}
  */
@@ -103,12 +103,84 @@ export const generatePlan = async (sessionId) => {
       session_id: sessionId,
       use_intelligent_processing: true,
       max_iterations: 5,
+      enable_hitl: false,
     }),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.detail || "Plan generation failed");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Generate project plan with Human-in-the-Loop (HITL) mode
+ * @param {string} sessionId - Current session ID
+ * @param {number} maxIterations - Maximum reflection iterations
+ * @returns {Promise<Object>} - Returns plan data or pending review info
+ */
+export const generatePlanWithHITL = async (sessionId, maxIterations = 5) => {
+  const response = await fetch(`${API_BASE_URL}/generate-plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      use_intelligent_processing: true,
+      max_iterations: maxIterations,
+      enable_hitl: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Plan generation failed");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get pending review data for HITL
+ * @param {string} requestId - The review request ID
+ * @returns {Promise<Object>} - Pending review data including draft/reflection
+ */
+export const getPendingReview = async (requestId) => {
+  const response = await fetch(`${API_BASE_URL}/pending-review/${requestId}`);
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Failed to fetch pending review");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Submit human review and resume workflow
+ * @param {Object} payload - Review submission payload
+ * @param {string} payload.request_id - Request ID
+ * @param {string} payload.action - 'approve', 'feedback', or 'terminate'
+ * @param {string} [payload.feedback_text] - Optional feedback text
+ * @param {string} [payload.edited_text] - Optional edited draft/reflection
+ * @param {string} [payload.reviewer_id] - Optional reviewer identifier
+ * @param {string} authToken - Authorization token (default: 'changeme')
+ * @returns {Promise<Object>} - Resume result with status and optional new request_id
+ */
+export const submitReview = async (payload, authToken = "changeme") => {
+  const response = await fetch(`${API_BASE_URL}/resume-review`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Review submission failed");
   }
 
   return await response.json();

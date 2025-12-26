@@ -9,6 +9,8 @@ export const ReviewStep = ({
   feasibilityReport,
   feasibilityFilePath,
   developmentContextJsonPath,
+  enableHITL,
+  onToggleHITL,
   onGeneratePlan,
 }) => {
   const [feedback, setFeedback] = useState("");
@@ -64,8 +66,70 @@ export const ReviewStep = ({
         />
       </div>
 
+      {/* HITL Mode Toggle */}
+      <div className="hitl-toggle-section">
+        <div className="hitl-toggle-header">
+          <label className="hitl-toggle">
+            <input
+              type="checkbox"
+              checked={enableHITL}
+              onChange={(e) => onToggleHITL(e.target.checked)}
+            />
+            <span className="toggle-slider"></span>
+            <span className="toggle-label">
+              🔄 Enable Human-in-the-Loop Review
+            </span>
+          </label>
+        </div>
+        <div className="hitl-info">
+          {enableHITL ? (
+            <div className="hitl-enabled-info">
+              <p>
+                <strong>✅ HITL Mode Enabled</strong>
+              </p>
+              <p>
+                You'll review and provide feedback at each stage of the plan
+                generation:
+              </p>
+              <ul>
+                <li>
+                  📝 <strong>Draft Review:</strong> Review the AI-generated
+                  draft plan
+                </li>
+                <li>
+                  🔍 <strong>Critique Review:</strong> Review and adjust the
+                  AI's analysis
+                </li>
+                <li>
+                  ✏️ <strong>Revision:</strong> AI incorporates your feedback
+                  into the final plan
+                </li>
+              </ul>
+              <p className="hitl-tip">
+                💡 You can edit content, provide feedback, or finalize at any
+                point.
+              </p>
+            </div>
+          ) : (
+            <div className="hitl-disabled-info">
+              <p>
+                <strong>⚡ Standard Mode</strong>
+              </p>
+              <p>
+                The AI will automatically generate the plan through multiple
+                reflection iterations without human review checkpoints.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       <Button onClick={onGeneratePlan} disabled={loading}>
-        {loading ? "Generating Plan..." : "Generate Project Plan"}
+        {loading
+          ? "Generating Plan..."
+          : enableHITL
+          ? "🔄 Generate Plan with Review"
+          : "⚡ Generate Project Plan"}
       </Button>
     </div>
   );
@@ -76,5 +140,12 @@ ReviewStep.propTypes = {
   feasibilityReport: PropTypes.string,
   feasibilityFilePath: PropTypes.string,
   developmentContextJsonPath: PropTypes.string,
+  enableHITL: PropTypes.bool,
+  onToggleHITL: PropTypes.func,
   onGeneratePlan: PropTypes.func.isRequired,
+};
+
+ReviewStep.defaultProps = {
+  enableHITL: false,
+  onToggleHITL: () => {},
 };

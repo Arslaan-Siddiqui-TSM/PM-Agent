@@ -8,6 +8,7 @@ export const Button = ({
   variant = "primary",
   type = "button",
   className = "",
+  title = "",
 }) => {
   return (
     <button
@@ -15,6 +16,7 @@ export const Button = ({
       onClick={onClick}
       disabled={disabled}
       className={`btn btn-${variant} ${className}`}
+      title={title}
     >
       {children}
     </button>
@@ -25,7 +27,8 @@ Button.propTypes = {
   children: PropTypes.node.isRequired,
   onClick: PropTypes.func,
   disabled: PropTypes.bool,
-  variant: PropTypes.oneOf(["primary", "secondary"]),
+  variant: PropTypes.oneOf(["primary", "secondary", "outline", "danger"]),
   type: PropTypes.oneOf(["button", "submit", "reset"]),
   className: PropTypes.string,
+  title: PropTypes.string,
 };
