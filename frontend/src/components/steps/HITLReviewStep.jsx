@@ -32,8 +32,21 @@ export const HITLReviewStep = ({
   useEffect(() => {
     if (content) {
       setEditedContent(content);
+      // Reset form when new review data arrives
+      setFeedbackText("");
+      setReviewerId("");
+      setShowConfirmation(false);
+      setPendingAction(null);
+      setActiveTab("preview");
+
+      console.log(
+        "📥 New review data received:",
+        reviewData?.request_id,
+        "type:",
+        reviewType
+      );
     }
-  }, [content]);
+  }, [content, reviewData?.request_id]);
 
   const handleActionClick = (action) => {
     // Validate feedback action
@@ -49,6 +62,14 @@ export const HITLReviewStep = ({
   };
 
   const handleConfirmSubmit = () => {
+    // Prevent double submission - disable button immediately
+    if (loading) {
+      console.warn(
+        "⚠️ Submission already in progress, ignoring duplicate click"
+      );
+      return;
+    }
+
     const hasEdits = editedContent !== content;
 
     const payload = {
@@ -59,9 +80,13 @@ export const HITLReviewStep = ({
       reviewer_id: reviewerId.trim() || null,
     };
 
+    console.log(
+      "📤 Submitting review with request_id:",
+      reviewData?.request_id
+    );
     onSubmitReview(payload);
-    setShowConfirmation(false);
-    setPendingAction(null);
+    // Keep confirmation visible with loading state while submission completes
+    // Don't clear state - let parent component handle navigation/reload
   };
 
   const handleCancelConfirmation = () => {

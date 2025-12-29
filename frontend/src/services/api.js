@@ -2,9 +2,6 @@ import { API_BASE_URL } from "../constants";
 
 /**
  * Upload files or use default files
- * @param {File[]} files - Array of files to upload
- * @param {boolean} useDefaultFiles - Whether to use default sample files
- * @returns {Promise<{session_id: string, uploaded_files: string[]}>}
  */
 export const uploadFiles = async (files, useDefaultFiles) => {
   const formData = new FormData();
@@ -12,48 +9,41 @@ export const uploadFiles = async (files, useDefaultFiles) => {
   if (useDefaultFiles) {
     const response = await fetch(
       `${API_BASE_URL}/upload?use_default_files=true`,
-      {
-        method: "POST",
-      }
+      { method: "POST" }
     );
-
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || "Upload failed");
     }
-
-    return await response.json();
-  } else {
-    if (files.length === 0) {
-      throw new Error("Please select at least one PDF file");
-    }
-
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
-
-    const response = await fetch(`${API_BASE_URL}/upload`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || "Upload failed");
-    }
-
     return await response.json();
   }
+
+  if (!files || files.length === 0) {
+    throw new Error("Please select at least one PDF file");
+  }
+
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  const response = await fetch(`${API_BASE_URL}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Upload failed");
+  }
+
+  return await response.json();
 };
 
 /**
  * Check project feasibility
- * @param {string} sessionId - Current session ID
- * @param {Object} developmentContext - Development process answers
- * @returns {Promise<{file_path: string, development_context_json_path: string}>}
  */
 export const checkFeasibility = async (sessionId, developmentContext) => {
-  const contextWithAnswers = {
+  const payload = {
     session_id: sessionId,
     use_intelligent_processing: true,
     development_context: developmentContext,
@@ -62,7 +52,7 @@ export const checkFeasibility = async (sessionId, developmentContext) => {
   const response = await fetch(`${API_BASE_URL}/feasibility`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(contextWithAnswers),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -75,8 +65,6 @@ export const checkFeasibility = async (sessionId, developmentContext) => {
 
 /**
  * Fetch file content from the server
- * @param {string} filePath - Path to the file
- * @returns {Promise<string>}
  */
 export const fetchFileContent = async (filePath) => {
   const response = await fetch(
@@ -91,9 +79,7 @@ export const fetchFileContent = async (filePath) => {
 };
 
 /**
- * Generate final project plan (standard mode without HITL)
- * @param {string} sessionId - Current session ID
- * @returns {Promise<{result: string, file_path: string}>}
+ * Generate final project plan (standard mode)
  */
 export const generatePlan = async (sessionId) => {
   const response = await fetch(`${API_BASE_URL}/generate-plan`, {
@@ -102,7 +88,7 @@ export const generatePlan = async (sessionId) => {
     body: JSON.stringify({
       session_id: sessionId,
       use_intelligent_processing: true,
-      max_iterations: 5,
+      max_iterations: 2,
       enable_hitl: false,
     }),
   });
@@ -116,12 +102,83 @@ export const generatePlan = async (sessionId) => {
 };
 
 /**
- * Generate project plan with Human-in-the-Loop (HITL) mode
- * @param {string} sessionId - Current session ID
- * @param {number} maxIterations - Maximum reflection iterations
- * @returns {Promise<Object>} - Returns plan data or pending review info
+ * Request or resume a feasibility revision (interrupt-aware)
  */
-export const generatePlanWithHITL = async (sessionId, maxIterations = 5) => {
+export const reviseFeasibility = async ({
+  sessionId,
+  currentVersion,
+  humanCritique,
+  revisionInstructions,
+  maxRevisions = 5,
+}) => {
+  const payload = {
+    session_id: sessionId,
+    current_version: currentVersion,
+    ...(humanCritique !== undefined && humanCritique !== null
+      ? { human_critique: humanCritique }
+      : {}),
+    max_revisions: maxRevisions,
+  };
+
+  if (revisionInstructions !== undefined && revisionInstructions !== null) {
+    payload.revision_instructions = revisionInstructions;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/revise-feasibility`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ detail: "Unknown error" }));
+    console.error("Revision API error:", errorData);
+    throw new Error(errorData.detail || "Revision failed");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get revision history for a session
+ */
+export const getRevisionHistory = async (sessionId) => {
+  const response = await fetch(
+    `${API_BASE_URL}/revision-history/${encodeURIComponent(sessionId)}`
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Failed to fetch revision history");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get current feasibility report version for a session
+ */
+export const getCurrentFeasibilityVersion = async (sessionId) => {
+  const response = await fetch(
+    `${API_BASE_URL}/current-feasibility-version/${encodeURIComponent(
+      sessionId
+    )}`
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Failed to fetch current version");
+  }
+
+  return await response.json();
+};
+
+/**
+ * Generate project plan with HITL enabled
+ */
+export const generatePlanWithHitl = async (sessionId, maxIterations = 5) => {
   const response = await fetch(`${API_BASE_URL}/generate-plan`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -142,12 +199,12 @@ export const generatePlanWithHITL = async (sessionId, maxIterations = 5) => {
 };
 
 /**
- * Get pending review data for HITL
- * @param {string} requestId - The review request ID
- * @returns {Promise<Object>} - Pending review data including draft/reflection
+ * Fetch pending plan review data
  */
-export const getPendingReview = async (requestId) => {
-  const response = await fetch(`${API_BASE_URL}/pending-review/${requestId}`);
+export const getPendingPlanReview = async (requestId) => {
+  const response = await fetch(
+    `${API_BASE_URL}/pending-review/${encodeURIComponent(requestId)}`
+  );
 
   if (!response.ok) {
     const errorData = await response.json();
@@ -158,29 +215,23 @@ export const getPendingReview = async (requestId) => {
 };
 
 /**
- * Submit human review and resume workflow
- * @param {Object} payload - Review submission payload
- * @param {string} payload.request_id - Request ID
- * @param {string} payload.action - 'approve', 'feedback', or 'terminate'
- * @param {string} [payload.feedback_text] - Optional feedback text
- * @param {string} [payload.edited_text] - Optional edited draft/reflection
- * @param {string} [payload.reviewer_id] - Optional reviewer identifier
- * @param {string} authToken - Authorization token (default: 'changeme')
- * @returns {Promise<Object>} - Resume result with status and optional new request_id
+ * Resume plan review with human feedback
  */
-export const submitReview = async (payload, authToken = "changeme") => {
+export const resumePlanReview = async (payload) => {
+  const hitlSecret = import.meta.env.VITE_HITL_SECRET || "changeme";
+
   const response = await fetch(`${API_BASE_URL}/resume-review`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${authToken}`,
+      Authorization: `Bearer ${hitlSecret}`,
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(errorData.detail || "Review submission failed");
+    throw new Error(errorData.detail || "Resume review failed");
   }
 
   return await response.json();

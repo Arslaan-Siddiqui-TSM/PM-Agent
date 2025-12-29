@@ -47,124 +47,144 @@
   font-style: italic;
 }
 
-/* HITL Toggle Section */
-.hitl-toggle-section {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+/* Revision Panel */
+.revision-panel {
+  background: white;
   border-radius: 12px;
-  padding: 24px;
+  padding: 25px;
   margin: 30px 0;
-  border: 2px solid #e2e8f0;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.hitl-toggle-section:has(input:checked) {
-  border-color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-}
-
-.hitl-toggle-header {
-  margin-bottom: 16px;
-}
-
-.hitl-toggle {
+.revision-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  user-select: none;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-.hitl-toggle input[type="checkbox"] {
-  display: none;
+.revision-header h3 {
+  margin: 0;
 }
 
-.toggle-slider {
-  position: relative;
-  width: 52px;
-  height: 28px;
-  background: #cbd5e1;
-  border-radius: 999px;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
+.revision-meta {
+  color: #666;
+  font-size: 0.95em;
 }
 
-.toggle-slider::before {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 22px;
-  height: 22px;
-  background: white;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+.revision-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
 }
 
-.hitl-toggle input:checked + .toggle-slider {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.hitl-toggle input:checked + .toggle-slider::before {
-  transform: translateX(24px);
-}
-
-.toggle-label {
-  font-size: 1.1rem;
+.field-label {
+  display: block;
   font-weight: 600;
-  color: #334155;
+  margin: 16px 0 8px;
 }
 
-.hitl-info {
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+.revision-submit {
+  margin-top: 16px;
 }
 
-.hitl-enabled-info,
-.hitl-disabled-info {
-  font-size: 0.95rem;
-  line-height: 1.6;
+.revision-history {
+  margin-top: 24px;
 }
 
-.hitl-enabled-info p:first-child,
-.hitl-disabled-info p:first-child {
-  margin: 0 0 12px 0;
-  color: #1e293b;
-}
-
-.hitl-enabled-info p:nth-child(2) {
+.revision-history h4 {
   margin: 0 0 8px 0;
-  color: #475569;
 }
 
-.hitl-enabled-info ul {
-  margin: 0 0 12px 0;
-  padding-left: 8px;
+.muted {
+  color: #777;
+}
+
+.history-list {
   list-style: none;
-}
-
-.hitl-enabled-info li {
-  padding: 6px 0;
-  color: #475569;
-}
-
-.hitl-enabled-info li strong {
-  color: #1e293b;
-}
-
-.hitl-tip {
   margin: 0;
-  padding: 10px 14px;
-  background: #fef9c3;
-  border-radius: 6px;
-  color: #854d0e;
-  font-size: 0.9rem;
+  padding: 0;
 }
 
-.hitl-disabled-info p:last-child {
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.history-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.history-version {
+  font-weight: 600;
+}
+
+.history-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.file-path-inline code {
+  font-size: 0.85em;
+}
+
+/* Diff view */
+.diff-view {
+  margin-top: 24px;
+}
+
+.diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.diff-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.diff-line {
   margin: 0;
-  color: #64748b;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  border-left: 4px solid transparent;
+}
+
+.diff-line.changed {
+  background: #fff7e6;
+  border-left-color: #f0ad4e;
+}
+
+.diff-line.added {
+  background: #eaffea;
+  border-left-color: #5cb85c;
+}
+
+.diff-line.removed {
+  background: #ffeaea;
+  border-left-color: #d9534f;
+}
+
+/* Approval Actions */
+.approval-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.approval-actions button {
+  flex: 1;
+
 }

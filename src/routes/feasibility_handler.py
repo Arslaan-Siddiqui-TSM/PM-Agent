@@ -8,10 +8,12 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime
 import time
+import json
 
 from fastapi import HTTPException
 
 from src.core.session import Session
+from src.utils.token_utils import get_session_stats, reset_tracker, snapshot, diff
 
 
 class FeasibilityHandler:
@@ -52,6 +54,10 @@ class FeasibilityHandler:
         """
         print(f"Feasibility check requested for session: {session.session_id}")
         start_time = time.time()
+        
+        # Reset and snapshot token tracker for this run
+        reset_tracker()
+        snapshot_before = snapshot()
         
         try:
             from src.app.feasibility_agent import save_development_context_to_json
@@ -120,13 +126,40 @@ class FeasibilityHandler:
             execution_time = time.time() - start_time
             print(f"Feasibility check completed in {execution_time:.2f}s")
             
+            # Capture token usage stats
+            token_stats = get_session_stats()
+            token_snapshot = snapshot()
+            
+            print("\n" + "="*80)
+            print("📊 FEASIBILITY GENERATION - TOKEN USAGE SUMMARY")
+            print("="*80)
+            print(f"Total LLM Calls:         {token_stats['total_calls']}")
+            print(f"Total Input Tokens:      {token_stats['total_input_tokens']:,}")
+            print(f"Total Output Tokens:     {token_stats['total_output_tokens']:,}")
+            print(f"Total Tokens:            {token_stats['total_tokens']:,}")
+            print(f"Session Duration:        {token_stats['session_duration']:.2f}s")
+            if token_stats['total_tokens'] > 0:
+                print(f"Avg Speed:               {token_stats['total_tokens']/token_stats['session_duration']:.2f} tok/s")
+            print("="*80 + "\n")
+            
+            # Save token report to JSON
+            token_report_path = self._save_token_report(
+                session_id=session.session_id,
+                token_stats=token_stats,
+                execution_time=execution_time,
+                phase="FEASIBILITY_GENERATION"
+            )
+            print(f"✅ Token usage report saved: {token_report_path}\n")
+            
             return {
                 "session_id": session.session_id,
                 "message": f"Feasibility assessment generated successfully. Two files created: {thinking_path.name} and {report_path.name}",
                 "thinking_summary_file": str(thinking_path),
                 "feasibility_report_file": str(report_path),
                 "development_context_json_path": dev_context_json_path,
-                "execution_time": execution_time
+                "execution_time": execution_time,
+                "token_report_path": str(token_report_path),
+                "token_stats": token_stats
             }
             
         except Exception as e:
@@ -239,6 +272,68 @@ class FeasibilityHandler:
             "feasibility_report": feasibility_report
         }
     
+    def _save_token_report(
+        self, 
+        session_id: str, 
+        token_stats: Dict[str, Any], 
+        execution_time: float,
+        phase: str = "FEASIBILITY_GENERATION"
+    ) -> Path:
+        """Save token usage statistics to JSON file."""
+        session_id_short = session_id[:8]
+        output_dir = Path(f"output/session_{session_id_short}/reports")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_path = output_dir / f"token_stats_{session_id_short}_{timestamp}.json"
+        
+        # Get the calls from the tracker to include per-call details
+        from src.config.llm_config import session_tracker
+        
+        payload = {
+            "session_id": session_id,
+            "phase": phase,
+            "created_at": datetime.now().isoformat(),
+            "summary": {
+                "total_calls": token_stats['total_calls'],
+                "total_input_tokens": token_stats['total_input_tokens'],
+                "total_output_tokens": token_stats['total_output_tokens'],
+                "total_tokens": token_stats['total_tokens'],
+                "execution_time_seconds": execution_time,
+                "session_duration_seconds": token_stats.get('session_duration', 0)
+            },
+            "cost_estimate": {
+                "provider": "NVIDIA",
+                "input_cost": round((token_stats['total_input_tokens'] / 1_000_000) * 0.02, 4),
+                "output_cost": round((token_stats['total_output_tokens'] / 1_000_000) * 0.06, 4),
+                "total_cost_usd": round(
+                    (token_stats['total_input_tokens'] / 1_000_000) * 0.02 +
+                    (token_stats['total_output_tokens'] / 1_000_000) * 0.06,
+                    4
+                )
+            },
+            "per_call_details": [
+                {
+                    "call_index": i,
+                    "provider": call.get('provider', 'NVIDIA'),
+                    "model": call.get('model', 'unknown'),
+                    "input_tokens": call.get('input_tokens', 0),
+                    "output_tokens": call.get('output_tokens', 0),
+                    "total_tokens": call.get('total_tokens', 0),
+                    "duration_seconds": call.get('duration', 0),
+                    "tokens_per_second": call.get('tokens_per_sec', 0),
+                    "timestamp": call.get('timestamp', 0),
+                    "estimated": call.get('estimated', False)
+                }
+                for i, call in enumerate(session_tracker.calls)
+            ]
+        }
+        
+        with open(report_path, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        
+        return report_path
+    
     def _save_feasibility_files(
         self,
         feasibility_result: Dict[str, str],
@@ -250,18 +345,19 @@ class FeasibilityHandler:
         output_dir = Path(f"output/session_{session_id_short}/reports")
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Create filename with session ID and timestamp
+        # Create filename with version numbering (v1 is initial)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        # Save thinking summary
-        thinking_filename = f"thinking_summary_{session_id[:8]}_{timestamp}.md"
+        # Save thinking summary with version and timestamp
+        thinking_filename = f"thinking_summary_v1_{timestamp}.md"
         thinking_path = output_dir / thinking_filename
         with open(thinking_path, "w", encoding="utf-8") as f:
             f.write(feasibility_result["thinking_summary"])
         print(f"Thinking summary saved to: {thinking_path}")
         
-        # Save feasibility report
-        report_filename = f"feasibility_report_{session_id[:8]}_{timestamp}.md"
+        # Save feasibility report with version numbering (v1 is initial)
+        # This allows revision history to track v1, v2, v3... format
+        report_filename = f"feasibility_report_v1.md"
         report_path = output_dir / report_filename
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(feasibility_result["feasibility_report"])

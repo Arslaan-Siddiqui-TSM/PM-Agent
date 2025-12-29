@@ -1,0 +1,286 @@
+/* Revision Management Step Styles */
+
+.current-version-box {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.version-info {
+  margin-bottom: 20px;
+}
+
+.version-info h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.2em;
+  opacity: 0.9;
+}
+
+.version-number {
+  font-size: 3em;
+  font-weight: bold;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.version-description {
+  margin: 10px 0 0 0;
+  opacity: 0.95;
+  line-height: 1.6;
+}
+
+.current-report {
+  margin-top: 20px;
+}
+
+/* Revision Panel */
+.revision-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin: 30px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.panel-header {
+  margin-bottom: 20px;
+}
+
+.panel-header h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+}
+
+.panel-hint {
+  color: #666;
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.revision-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-label {
+  display: block;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.feedback-textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1em;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feedback-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.revision-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.revision-buttons button {
+  flex: 1;
+}
+
+/* Revision History Panel */
+.revision-history-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin: 30px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.revision-history-panel h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+  transition: background 0.2s ease;
+}
+
+.history-item:hover {
+  background: #f3f3f3;
+}
+
+.history-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+}
+
+.history-version {
+  font-weight: 600;
+  color: #667eea;
+  min-width: 40px;
+}
+
+.history-time {
+  color: #999;
+  font-size: 0.85em;
+}
+
+.history-type {
+  background: #e8f0ff;
+  color: #667eea;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.history-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.file-path-inline {
+  display: none;
+}
+
+.file-path-inline code {
+  font-size: 0.8em;
+  color: #666;
+}
+
+/* Diff View */
+.diff-view {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  margin: 30px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.diff-view h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+}
+
+.diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.diff-column {
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.diff-title {
+  position: sticky;
+  top: 0;
+  background: #f5f5f5;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 0.9em;
+  z-index: 1;
+}
+
+.diff-line {
+  margin: 0;
+  padding: 8px 16px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 0.85em;
+  border-left: 4px solid transparent;
+  background: white;
+}
+
+.diff-line.unchanged {
+  background: #f9f9f9;
+}
+
+.diff-line.changed {
+  background: #fff7e6;
+  border-left-color: #f0ad4e;
+}
+
+.diff-line.added {
+  background: #eaffea;
+  border-left-color: #5cb85c;
+}
+
+.diff-line.removed {
+  background: #ffeaea;
+  border-left-color: #d9534f;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.action-buttons button {
+  flex: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .diff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .history-actions {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .current-version-box {
+    padding: 20px;
+  }
+
+  .version-number {
+    font-size: 2em;
+  }
+}

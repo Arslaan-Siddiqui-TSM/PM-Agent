@@ -320,11 +320,13 @@ async def resume_review(
     if not pending_file.exists():
         if logger:
             logger.logger.warning(
-                f"Resume attempted but pending file not found: {payload.request_id}"
+                f"Resume attempted but pending file not found: {payload.request_id} "
+                f"(This may be a duplicate submission or the review was already processed)"
             )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pending review not found for request_id: {payload.request_id}",
+            detail=f"Pending review not found for request_id: {payload.request_id}. "
+                   f"This review may have already been processed. Please refresh the page to see the latest status.",
         )
 
     # ═══════════════════════════════════════════════════════════

@@ -5,19 +5,19 @@ export const WORKFLOW_STEPS = {
   DEVELOPMENT_PROCESS: 2,
   FEASIBILITY: 3,
   REVIEW: 4,
-  // HITL-specific steps (only used when enable_hitl is true)
-  HITL_DRAFT_REVIEW: 5,
-  HITL_REFLECTION_REVIEW: 6,
+  REVISION_MANAGEMENT: 5,
+  PROJECT_SPECIFICATION: 6,
+  PLAN_HITL_REVIEW: 6.5,
   PLAN: 7,
 };
 
-// Review types returned by the API
+// Review types returned by the API (kept for compatibility with HITL review component)
 export const REVIEW_TYPES = {
   DRAFT: "draft_review",
   REFLECTION: "reflection_review",
 };
 
-// Review actions
+// Review actions (kept for compatibility with HITL review component)
 export const REVIEW_ACTIONS = {
   APPROVE: "approve",
   FEEDBACK: "feedback",
