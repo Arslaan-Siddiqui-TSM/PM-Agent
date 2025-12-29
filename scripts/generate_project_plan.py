@@ -2,7 +2,6 @@ from src.states.reflection_state import ReflectionState
 
 from src.app.graph import get_graph
 from src.utils.helper import MarkdownLogger, set_global_logger
-from src.core.document_intelligence_pipeline import DocumentIntelligencePipeline
 
 from rich.console import Console
 from rich.panel import Panel
@@ -20,25 +19,18 @@ REFLECTION_DEFAULT_TASK = (
 )
 
 
-def run_agent(
-    use_document_intelligence: bool = True,
-    enable_cache: bool = True,
-    max_iterations: int = 2,
-):
+def run_agent(max_iterations: int = 2):
     """
     Run the ReWOO agent with all documents in the files directory.
     
     The agent will automatically load:
     - All PDF documents from the 'files/' directory
-    - Optionally process through Document Intelligence Pipeline (recommended)
     - Feasibility question answers from 'outputs/feasibility_assessment.md'
     
     All execution steps will be saved to a markdown file in outputs/ directory.
     
     Args:
-        task (str): Task description for the agent
-        use_document_intelligence (bool): Use intelligent document processing (recommended)
-        enable_cache (bool): Enable caching for faster repeated runs
+        max_iterations (int): Maximum number of draft-reflect-revise cycles (default: 2)
     """
     start_time = time.time()
     
@@ -57,40 +49,20 @@ def run_agent(
     # Set as global logger so other modules can access it
     set_global_logger(md_logger)
     
-    # Process documents with intelligence pipeline (NEW)
+    # Load document context from feasibility assessment
     document_context = None
-    if use_document_intelligence:
+    feasibility_file = "outputs/feasibility_assessment.md"
+    if os.path.exists(feasibility_file):
         console = Console()
-        console.print("\n[bold yellow]🧠 Using Document Intelligence Pipeline[/bold yellow]")
-        console.print("[dim]This will automatically classify, extract, and analyze documents...[/dim]\n")
+        console.print("\n[bold yellow]📋 Loading Feasibility Assessment[/bold yellow]\n")
         
-        pipeline = DocumentIntelligencePipeline(enable_cache=enable_cache, verbose=True)
-        pipeline_result = pipeline.process_documents(pdf_files, output_dir="outputs/intermediate")
+        with open(feasibility_file, "r", encoding="utf-8") as f:
+            document_context = f.read()
         
-        # Generate comprehensive planning context
-        document_context = pipeline.get_planning_context(pipeline_result)
-        
-        feasibility_file = "outputs/feasibility_assessment.md"
-        if os.path.exists(feasibility_file):
-            with open(feasibility_file, "r", encoding="utf-8") as f:
-                feasibility_content = f.read()
-            
-            # Combine contexts
-            document_context = f"""{document_context}
-
-        ## FEASIBILITY ASSESSMENT:
-
-        {feasibility_content}
-        """
-            console.print("[green]✓ Loaded feasibility assessment[/green]")
-        else:
-            console.print("[yellow]⚠️  No feasibility assessment found[/yellow]")
-
-        console.print("\n[green]✓ Document Intelligence Pipeline completed[/green]")
-        console.print(f"[dim]Analysis report saved to: outputs/intermediate/document_analysis_report.md[/dim]\n")
+        console.print("[green]✓ Feasibility assessment loaded[/green]\n")
     else:
         console = Console()
-        console.print("\n[yellow]⚠️  Document Intelligence Pipeline disabled - using legacy mode[/yellow]\n")
+        console.print("\n[yellow]⚠️  No feasibility assessment found in outputs/[/yellow]\n")
     
     console = Console()
     console.rule("[bold blue]🔍 Executing Reflection Reasoning Loop[/bold blue]")
@@ -98,8 +70,6 @@ def run_agent(
     for pdf_file in sorted(pdf_files):
         console.print(f"   • {os.path.basename(pdf_file)}")
     console.print(f"[bold cyan]💡 Feasibility Context:[/bold cyan] outputs/feasibility_assessment.md")
-    if use_document_intelligence:
-        console.print(f"[bold cyan]🧠 Document Intelligence:[/bold cyan] ENABLED")
     console.print("\n")
     
     # Create initial state with document context
@@ -110,7 +80,7 @@ def run_agent(
         max_iterations=max_iterations,
     )
     
-    app = get_graph(initial_state)
+    app = get_graph(initial_state, enable_hitl=False)
     final_state = None
     final_plan_text = None  # Track the final plan when we see it
 
@@ -258,17 +228,6 @@ def run_agent(
 
 if __name__ == "__main__":
     # The agent will automatically process all PDF files in the files/ directory
-    # 
-    # NEW: Document Intelligence Pipeline (Recommended)
-    # - Automatically classifies documents by type (not based on filename)
-    # - Extracts structured information from each document
-    # - Analyzes for gaps, conflicts, and planning readiness
-    # - Generates comprehensive planning context
-    # - Uses caching for faster subsequent runs
-    #
-    # Set use_document_intelligence=False to use legacy raw document loading
+    # and load feasibility assessment from outputs/feasibility_assessment.md
     
-    run_agent(
-        use_document_intelligence=True,  # Use intelligent document processing
-        enable_cache=True  # Enable caching for faster runs
-    )
+    run_agent(max_iterations=2)

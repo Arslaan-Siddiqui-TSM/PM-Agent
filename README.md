@@ -1,237 +1,498 @@
-# Project Planning Assistant (ReWOO demo)
+# PM Agent (PMA)
 
-Turn multiple project PDFs (specs, BRDs, test plans) into a feasibility assessment and a polished project plan. Backend is FastAPI; frontend is React (Vite). Documents are parsed, classified, and analyzed; embeddings go to Qdrant for retrieval; the plan is generated via an LLM workflow.
+**Intelligent project planning automation that combines AI reasoning with human expertise to generate feasibility assessments and implementation plans from project documents.**
 
-Quick, simple, and local-friendly.
+---
 
-## What’s inside
+## 🎯 What is PMA?
 
-- FastAPI backend (http://localhost:8000)
-- React/Vite frontend (http://localhost:5173)
-- Document Intelligence Pipeline (classify → extract → analyze)
-- Qdrant vector DB (Docker) for embeddings and retrieval
+PMA is a system that automates the critical first phase of software project planning:
 
-## Prerequisites
+1. **Input**: Project documents (specs, requirements, test plans, RFDs, etc.)
+2. **Analysis**: AI intelligently reads, classifies, and analyzes documents
+3. **Assessment**: Generate feasibility report with risk analysis
+4. **Planning**: Create detailed implementation plans with human feedback loops
+5. **Output**: Polished project plans with version history and cost tracking
 
-- Python 3.13+
-- Node.js 18+ (for the frontend)
-- Docker (for Qdrant)
-- API keys (choose one or more):
-  - **NVIDIA NIM**: for both LLM and embeddings (recommended - get key from [build.nvidia.com](https://build.nvidia.com/))
-  - **OpenAI**: for both LLM and embeddings (get key from [platform.openai.com](https://platform.openai.com/api-keys))
-  - **Google Gemini**: for both LLM and embeddings (get key from [aistudio.google.com](https://aistudio.google.com/app/apikey))
+**Perfect for**: Technical leads, project managers, and planning teams who need to quickly evaluate project scope and create actionable roadmaps with confidence.
 
-Note: You can configure multiple providers for **automatic fallback**! If your primary provider fails (rate limit, API key issue, etc.), the system automatically tries the next available provider.
+---
 
-## Setup (Windows cmd)
+## 🚀 Quick Demo (3 minutes)
 
-1. Create your environment file
+```bash
+# 1. Setup (one-time)
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+docker compose up -d qdrant
 
-Create a `.env` file in the project root with your API keys. **Choose one of these configurations:**
+# 2. Start services (2 terminals)
+python server.py              # Terminal 1: Backend
+cd frontend && npm run dev    # Terminal 2: Frontend
 
-### Option A: NVIDIA NIM (Recommended)
+# 3. Open browser
+Visit http://localhost:5173 → Click "Upload & Continue"
+```
+
+Within seconds, you'll see:
+- Documents auto-analyzed
+- Feasibility assessment generated
+- Human-in-the-loop review interface ready
+- Project plan with editing capability
+
+---
+
+## 💡 Key Problems PMA Solves
+
+| Problem | PMA Solution |
+|---------|-------------|
+| **Time-consuming manual planning** | Generates first draft automatically |
+| **Document information scattered** | Unified context from all sources |
+| **Missed requirements/risks** | AI analyzes across all documents |
+| **Plan quality depends on reviewer** | Human feedback guides AI refinement |
+| **No version history/tracking** | Complete audit trail of changes |
+| **Unknown project costs** | Token usage tracking per operation |
+
+---
+
+## 🏗️ How It Works
+
+### Architecture (Simple View)
+
+```
+┌─────────────────────────────────────────────┐
+│    React Frontend (http://localhost:5173)   │
+│   - Document upload                         │
+│   - Review/edit interface                   │
+│   - Plan comparison & history               │
+└────────────────┬────────────────────────────┘
+                 │ (API calls)
+┌────────────────▼────────────────────────────┐
+│     FastAPI Backend (http://localhost:8000) │
+│   - File processing                         │
+│   - LangGraph orchestration                 │
+│   - HITL state management                   │
+└────────────────┬────────────────────────────┘
+                 │
+    ┌────────────┴────────────┬────────────┐
+    │                         │            │
+┌───▼────────┐  ┌───────────▼──┐  ┌────▼─────────┐
+│ LLM Calls  │  │ Qdrant VectorDB  │  Session Files  │
+│(NVIDIA/OAI)│  │(Context Retrieval) │  (JSON state)   │
+└────────────┘  └────────────────┘  └─────────────┘
+```
+
+### Workflow Stages
+
+#### 1️⃣ **Upload & Classify** (Automatic)
+- User uploads project documents (PDF, Markdown)
+- System reads and understands document types automatically
+- Extracts key information (requirements, constraints, tech stack hints)
+
+#### 2️⃣ **Feasibility Assessment** (AI → Human Review)
+- LLM analyzes technical feasibility
+- Evaluates resource requirements
+- Identifies risks and blockers
+- Human reviews and approves/modifies
+- **Output**: Feasibility report (saved with version)
+
+#### 3️⃣ **Development Context** (User Input)
+- User enters team size, timeline, budget
+- Specifies tech stack and constraints
+- Sets iteration preferences
+
+#### 4️⃣ **Plan Generation with HITL** (Multi-Stage)
+
+```
+AI generates draft → Human reviews & edits → AI reflects on feedback
+                                                       ↓
+                                        Human reviews reflection
+                                                       ↓
+                                      AI revises plan → Done or loop
+```
+
+**HITL = Human-In-The-Loop**: System pauses for human judgment at critical points.
+
+---
+
+## 👥 User Roles & Workflows
+
+### Product Manager / Planning Lead
+- **Goal**: Get initial project scope assessment quickly
+- **Steps**: 
+  1. Upload project docs (2 min)
+  2. Review generated assessment (5 min)
+  3. Answer development context (3 min)
+  4. Review and edit draft plan (10-15 min)
+  5. Approve final plan with feedback (5 min)
+- **Output**: Implementation roadmap ready for development team
+
+### Engineering Lead
+- **Goal**: Ensure plan aligns with technical reality
+- **Steps**:
+  1. Review feasibility analysis
+  2. Edit plan with technical details
+  3. Provide feedback on reflection stage
+  4. Validate final plan against team capacity
+- **Output**: Realistic, team-approved implementation plan
+
+### Executive / Decision Maker
+- **Goal**: Understand project scope and feasibility
+- **Interaction**: View final reports and recommendations
+- **Time**: 5-10 minutes to review key findings
+
+---
+
+## 🔌 API Reference for Integration
+
+### Core Endpoints
+
+#### Upload Documents
+```bash
+POST /api/upload?use_default_files=false
+Content-Type: multipart/form-data
+
+Files: [doc1.pdf, doc2.pdf, ...]
+# Response: { "session_id": "abc123", "uploaded_files": [...] }
+```
+
+#### Generate Feasibility Assessment
+```bash
+POST /api/feasibility
+{
+  "session_id": "abc123",
+  "development_context": {
+    "team_size": 5,
+    "timeline_weeks": 12,
+    "budget_usd": 150000,
+    "tech_stack": "Python, React, PostgreSQL"
+  }
+}
+# Response: { "file_path": "outputs/session_abc123/reports/feasibility_v1.md" }
+```
+
+#### Start Plan Generation (with HITL)
+```bash
+POST /api/generate-plan
+{
+  "session_id": "abc123",
+  "enable_hitl": true,
+  "max_iterations": 5
+}
+# Response: { "request_id": "req-xyz", "review_type": "draft_review", "content": "..." }
+```
+
+#### Resume from HITL Pause
+```bash
+POST /api/resume-review
+Authorization: Bearer <HITL_SECRET>
+{
+  "request_id": "req-xyz",
+  "action": "feedback",
+  "feedback_text": "Add more details on infrastructure costs",
+  "edited_text": "..."
+}
+# Response: { "interrupted_again": true, "new_request_id": "req-abc" }
+# OR: { "completed": true, "final_plan": "..." }
+```
+
+#### Get Pending Review
+```bash
+GET /api/pending-review/req-xyz
+# Response: { "request_id": "...", "review_type": "draft_review", "content": "...", "iteration": 1 }
+```
+
+---
+
+## 📊 Features & Capabilities
+
+### 🤖 Intelligent Analysis
+- **Document Classification**: Auto-identifies FSD, NFRD, BRD, test plans, RFDs
+- **Requirement Extraction**: Pulls structured info from unstructured docs
+- **Gap Analysis**: Identifies missing information and conflicts
+- **Context Retrieval**: Vector embeddings find relevant context quickly
+
+### 🔄 Human-AI Collaboration (HITL)
+- **Draft Review**: Edit AI-generated plans directly
+- **Feedback Integration**: AI refines based on human guidance
+- **Iterative Refinement**: Up to 5 revision cycles
+- **Edit Preservation**: Your changes survive all revisions
+
+### 📈 Planning & Tracking
+- **Version History**: All plan versions with timestamps
+- **Change Diffs**: Side-by-side comparison of revisions
+- **Cost Analysis**: Token usage per operation (detailed breakdown)
+- **Audit Trail**: Complete history of who made what changes
+
+### 🌍 Multi-Provider LLM Support
+- **NVIDIA NIM** (Recommended) - Cost-effective, fast
+- **OpenAI** - Full GPT-4 capability
+- **Google Gemini** - Advanced reasoning
+- **Automatic Failover** - Seamless switching if primary fails
+
+### 📁 Session Management
+- Each project gets a unique session ID
+- All intermediate files saved (inputs, reports, plans)
+- Easy recovery and re-run from checkpoints
+- JSON state snapshots for debugging
+
+---
+
+## 🛠️ Setup Guide
+
+### Prerequisites
+- **Python 3.13+**
+- **Node.js 18+** (for frontend)
+- **Docker** (for Qdrant vector DB)
+- **API Key** from one: NVIDIA NIM, OpenAI, or Google Gemini
+
+### Step 1: Configure Environment
+
+Create `.env` in project root:
 
 ```env
-# Primary LLM Provider
+# === LLM Configuration ===
 LLM_PROVIDER=nvidia
-NVIDIA_API_KEY=nvapi-your-key-here
+NVIDIA_API_KEY=nvapi-xxxxx
 NVIDIA_MODEL=qwen3-next-80b-a3b-instruct
 
-# Embedding Provider
+# === Embeddings ===
 EMBEDDING_PROVIDER=nvidia
 NVIDIA_EMBEDDING_MODEL=llama-3.2-nemoretriever-1b-vlm-embed-v1
 
-# Optional: Add fallback providers (automatic failover)
-OPENAI_API_KEY=sk-your-key-here
-GOOGLE_API_KEY=your-google-key-here
+# === Optional Fallback (if primary fails) ===
+OPENAI_API_KEY=sk-xxxxx
+GOOGLE_API_KEY=AIzaSy-xxxxx
 
-# Other required keys
-TAVILY_API_KEY=tvly-your-key-here
+# === Other Services ===
+TAVILY_API_KEY=tvly-xxxxx  # Optional: for web search
+HITL_SECRET=changeme       # Security token for HITL endpoints
+
+# === Qdrant ===
+QDRANT_URL=http://localhost:6333
 ```
 
-### Option B: OpenAI
+### Step 2: Start Qdrant (Vector Database)
 
-```env
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-your-key-here
-OPENAI_MODEL=gpt-4o-mini
-
-EMBEDDING_PROVIDER=openai
-TAVILY_API_KEY=tvly-your-key-here
+```bash
+docker compose up -d qdrant
+# Verify: curl http://localhost:6333/health
 ```
 
-### Option C: Google Gemini
+### Step 3: Install & Run Backend
 
-```env
-LLM_PROVIDER=gemini
-GOOGLE_API_KEY=your-google-key-here
-GEMINI_MODEL=gemini-2.5-pro
-
-EMBEDDING_PROVIDER=gemini
-TAVILY_API_KEY=tvly-your-key-here
-```
-
-### Option D: Multi-Provider with Fallback
-
-```env
-# Primary: NVIDIA, Fallback: OpenAI → Gemini
-LLM_PROVIDER=nvidia
-NVIDIA_API_KEY=nvapi-your-key-here
-OPENAI_API_KEY=sk-your-key-here
-GOOGLE_API_KEY=your-google-key-here
-
-EMBEDDING_PROVIDER=nvidia
-TAVILY_API_KEY=tvly-your-key-here
-```
-
-2. Start Qdrant (vector DB)
-
-```cmd
-docker compose -f docker-compose.yml up -d qdrant
-```
-
-3. Backend: create venv and install
-
-```cmd
-py -3.13 -m venv .venv
-.venv\Scripts\activate
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-4. Run the backend API
-
-```cmd
 python server.py
+# Server runs on http://localhost:8000
 ```
 
-5. Frontend: install and run
+### Step 4: Install & Run Frontend
 
-```cmd
+```bash
 cd frontend
 npm install
 npm run dev
+# Frontend runs on http://localhost:5173
 ```
 
-Frontend runs at http://localhost:5173 and proxies API calls to http://localhost:8000.
+### Step 5: Test the System
 
-## Try it
+Open browser → **http://localhost:5173**
+- Click "Upload & Continue" (uses sample files)
+- Follow the workflow
+- Review generated plans
 
-Option A – UI
+---
 
-- Visit http://localhost:5173
-- Keep “Use default sample files” checked and click “Upload & Continue”
-- Continue to Feasibility → Generate Project Plan
+## 📂 Project Structure
 
-Option B – API (quick smoke test)
-
-```cmd
-curl http://localhost:8000/health/
-
-curl -X POST "http://localhost:8000/api/upload?use_default_files=true"
-
-:: Use the returned session_id below
-curl -X POST http://localhost:8000/api/feasibility ^
-  -H "Content-Type: application/json" ^
-  -d "{\"session_id\":\"<SESSION_ID>\",\"use_intelligent_processing\":true}"
-
-curl -X POST http://localhost:8000/api/generate-plan ^
-  -H "Content-Type: application/json" ^
-  -d "{\"session_id\":\"<SESSION_ID>\",\"use_intelligent_processing\":true,\"max_iterations\":5}"
+```
+PMA/
+├── frontend/              # React UI
+│   ├── src/
+│   │   ├── components/    # React components
+│   │   ├── hooks/         # Custom hooks (useProjectWorkflow)
+│   │   └── services/      # API client
+│   └── package.json
+│
+├── src/                   # Backend Python
+│   ├── app/              # LangGraph workflows
+│   │   └── graph.py      # Main orchestration
+│   ├── routes/           # FastAPI endpoints
+│   │   ├── upload.py
+│   │   ├── feasibility.py
+│   │   ├── planning.py
+│   │   └── review_resume.py
+│   ├── core/             # Core logic
+│   │   ├── document_analyzer.py
+│   │   └── llm_service.py
+│   ├── states/           # Pydantic state models
+│   │   └── reflection_state.py
+│   ├── utils/            # Helpers
+│   │   └── helper.py
+│   └── tools/            # LangGraph tools
+│
+├── scripts/              # Standalone utilities
+│   ├── generate_project_plan.py  # Batch planning
+│   ├── compare_versions.py       # Plan comparison
+│   └── token_report_reader.py    # Cost analysis
+│
+├── output/               # Generated files
+│   ├── session_xxx/      # Per-session outputs
+│   │   ├── reports/      # Feasibility, plans
+│   │   └── context/      # Document context
+│   └── pending_reviews/  # HITL pause files
+│
+├── server.py             # FastAPI entry point
+├── requirements.txt      # Python dependencies
+├── docker-compose.yml    # Qdrant config
+└── README.md             # This file
 ```
 
-Outputs are saved under `outputs/` (feasibility report and final plan markdown files). Uploaded files are stored under `data/uploads/`.
+---
 
-## Key endpoints
+## 🐛 Troubleshooting
 
-- GET `/health/` – service status
-- POST `/api/upload?use_default_files=true` – load PDFs from `data/files/`
-- POST `/api/upload` – upload your own PDFs (multipart, max 15 files)
-- POST `/api/feasibility` – body: `{ session_id, use_intelligent_processing, development_context? }`
-- POST `/api/generate-plan` – body: `{ session_id, use_intelligent_processing, max_iterations }`
-- GET `/api/file-content?file_path=<path>` – read saved markdown files (restricted to `outputs/` and `uploads/`)
-
-## Folders you’ll use
-
-- `data/files/` – sample input PDFs
-- `data/uploads/` – uploaded PDFs (runtime)
-- `outputs/` – feasibility and plan markdown files
-- `qdrant_storage/` – persistent vector DB data (Docker volume)
-
-## Troubleshooting
-
-- **Qdrant connection failed** – ensure Docker is running: `docker compose up -d qdrant`
-- **401/invalid API key** – check API keys in `.env` for your chosen provider(s):
-  - NVIDIA: `NVIDIA_API_KEY`
-  - OpenAI: `OPENAI_API_KEY`
-  - Gemini: `GOOGLE_API_KEY`
-- **Rate limits (429)** – the system will automatically try fallback providers if configured, or try again later
-- **Upload errors** – only PDFs are accepted; max 15 files
-- **LLM initialization failed** – ensure at least one provider's API key is valid
-
-### Multi-Provider Fallback
-
-The system uses **pure LangChain ecosystem** (no OpenAI SDK) and automatically falls back to alternative providers if the primary fails:
-
-1. **Primary provider** (from `LLM_PROVIDER` env var) is tried first
-2. If it fails, the system tries **OpenAI** (if `OPENAI_API_KEY` is set)
-3. If that fails, tries **Gemini** (if `GOOGLE_API_KEY` is set)
-4. If that fails, tries **NVIDIA** (if `NVIDIA_API_KEY` is set)
-
-This ensures maximum reliability!
-
-## Version Comparison & Token Analysis
-
-The system supports **full version history tracking** and **token usage analysis** across feasibility generation and human-in-the-loop revisions.
-
-### View Revision History
-
+### "Cannot connect to Qdrant"
 ```bash
-# Get all versions (v1, v2, v3...) for a session
-curl http://localhost:8000/api/revision-history/{session_id}
+# Verify Qdrant is running
+docker ps | grep qdrant
+
+# If not running, start it
+docker compose up -d qdrant
+
+# Check health
+curl http://localhost:6333/health
 ```
 
-### Compare Versions
+### "401 Unauthorized" on /api/resume-review
+- Verify `HITL_SECRET` is set in `.env`
+- Check frontend sends header: `Authorization: Bearer <HITL_SECRET>`
 
+### "ImportError: No module named 'src'"
 ```bash
-# Full comparison (summary + side-by-side + diff)
-python scripts/compare_versions.py {session_id} 1 2
-
-# Summary only (character/line counts)
-python scripts/compare_versions.py {session_id} 1 2 --summary
-
-# Diff only (color-coded changes)
-python scripts/compare_versions.py {session_id} 1 2 --diff
-
-# Preview only (first 50 lines side-by-side)
-python scripts/compare_versions.py {session_id} 1 2 --preview
+# Run from project root (not from scripts/ directory)
+cd /path/to/PMA
+python scripts/generate_project_plan.py
 ```
 
-### View Token Usage
+### "Plan generation stuck on review"
+- Check server logs for LLM API errors
+- Verify API keys are valid
+- Try reloading page (frontend will re-fetch pending review)
 
+### "Qdrant OOM / too slow"
+- Reduce number of documents
+- Use simpler models (NIM over GPT-4)
+- Check `output/cache/` for large cached embeddings
+
+---
+
+## 📊 Monitoring & Analytics
+
+### View Cost Breakdown
 ```bash
-# Show all token reports for a session
-python scripts/token_report_reader.py {session_id} full
-
-# See cost breakdown and per-call metrics
-python scripts/token_report_reader.py {session_id} list
+python scripts/token_report_reader.py <session_id> full
+# Shows: tokens/cost per LLM call, total spend
 ```
 
-**Features:**
+### Compare Plan Versions
+```bash
+python scripts/compare_versions.py <session_id> 1 2 --full
+# Shows: diff, character count, side-by-side preview
+```
 
-- ✅ Initial report saved as v1 (enables v1-to-vN comparison)
-- ✅ Revision history tracks all versions with timestamps
-- ✅ Token metrics saved per version (cost breakdown)
-- ✅ Color-coded diff output (green = added, red = removed)
-- ✅ Side-by-side preview for quick visual comparison
-- ✅ Character/line count tracking to monitor report growth
+### Check Session Files
+```bash
+ls output/session_<session_id>/reports/
+# Lists all generated reports and plans
+```
 
-See **[VERSION_COMPARISON_GUIDE.md](docs/VERSION_COMPARISON_GUIDE.md)** for detailed examples and workflows.
+---
 
-## More docs
+## 🔐 Security & Privacy
 
-- Environment/config: `docs/ENV_CONFIGURATION.md`
-- Architecture and structure: `docs/PROJECT_STRUCTURE.md`, `docs/ARCHITECTURE_DIAGRAMS.md`
-- Migration and implementation notes: `docs/implementation/*`
-- Version comparison and token analysis: `docs/VERSION_COMPARISON_GUIDE.md`
+- **No external data storage**: All files stay on your infrastructure
+- **Local vector DB**: Qdrant runs in Docker on your machine
+- **Auth token**: HITL endpoints protected by `HITL_SECRET`
+- **Session isolation**: Each session is independent
+- **No user tracking**: No telemetry or external calls except to configured LLM provider
 
-—
+---
+
+## 🚀 Production Considerations
+
+### Scaling for Teams
+- Deploy FastAPI on cloud (AWS, GCP, Azure)
+- Use managed Qdrant (Qdrant Cloud)
+- Frontend static site (S3, Vercel, Netlify)
+- Database for session persistence (PostgreSQL)
+
+### High Availability
+- Multiple backend instances with load balancer
+- Persistent session storage (not local files)
+- Backup Qdrant instance
+- LLM provider failover (configured in `.env`)
+
+### Cost Optimization
+- Use NVIDIA NIM (cheapest: ~$0.50 per plan)
+- Cache document embeddings
+- Limit max_iterations (default 5, can reduce to 2-3)
+- Monitor token usage per session
+
+---
+
+## 📚 Deep Dives
+
+For detailed information, see:
+- [Architecture Details](docs/ARCHITECTURE_DIAGRAMS.md)
+- [HITL Workflow Design](docs/LANGGRAPH_HITL.md)
+- [Version Comparison Guide](docs/VERSION_COMPARISON_GUIDE.md)
+- [Environment Configuration](docs/ENV_CONFIGURATION.md)
+
+---
+
+## 🤝 Contributing
+
+To extend PMA:
+1. Review `src/app/graph.py` for workflow structure
+2. Add new nodes in `src/routes/` for endpoints
+3. Update `frontend/src/hooks/useProjectWorkflow.js` for UI
+4. Test with `scripts/generate_project_plan.py`
+
+---
+
+## ✅ Checklist for Leads
+
+Before using PMA with your team:
+
+- [ ] All team members have read this README
+- [ ] `.env` is configured with valid API key
+- [ ] Qdrant is running (`docker compose up -d qdrant`)
+- [ ] Backend & frontend both start without errors
+- [ ] Sample workflow completes successfully
+- [ ] Team understands HITL review process
+- [ ] Cost tracking mechanism is understood
+- [ ] Session storage location is backed up
+
+---
+
+## 📞 Support
+
+- **Issues**: Check logs in `output/` directory
+- **Debug**: Run standalone script: `python scripts/generate_project_plan.py`
+- **LLM Errors**: Check `.env` and API quotas
+- **Frontend**: Open browser DevTools (F12) to see API errors
+
+---
+
+## 📝 License
+
+Internal tool. All rights reserved.
+
+**Version**: 1.0  
+**Last Updated**: December 2025
