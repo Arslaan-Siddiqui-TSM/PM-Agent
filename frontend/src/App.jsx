@@ -8,6 +8,8 @@ import {
   DevelopmentProcessStep,
   FeasibilityStep,
   ReviewStep,
+  RevisionManagementStep,
+  ProjectSpecificationStep,
   PlanStep,
   HITLReviewStep,
 } from "./components/steps";
@@ -18,6 +20,7 @@ import "react-toastify/dist/ReactToastify.css";
 function App() {
   const {
     step,
+    setStep,
     sessionId,
     loading,
     error,
@@ -25,24 +28,30 @@ function App() {
     feasibilityReport,
     feasibilityFilePath,
     developmentContextJsonPath,
+    feasibilityVersion,
+    revisionHistory,
     finalPlan,
     planFilePath,
-    // HITL state
-    enableHITL,
-    hitlReviewData,
-    hitlReviewType,
-    hitlIteration,
+    // Plan HITL state
+    enablePlanHitl,
+    planHitlReviewType,
+    planHitlIteration,
+    planHitlPendingData,
     // Actions
     handleUpload,
     handleDevelopmentProcessSubmit,
     handleCheckFeasibility,
     handleGeneratePlan,
-    handleGeneratePlanWithHITL,
-    handleSubmitReview,
+    handleGeneratePlanWithHitl,
+    handleSubmitPlanReview,
+    handleRequestRevision,
+    handleRefreshRevisionHistory,
+    handleFetchRevisionContent,
+    handleSyncCurrentVersion,
     handleReset,
+    setEnablePlanHitl,
     setError,
     setSuccessMessage,
-    toggleHITL,
   } = useProjectWorkflow();
 
   // Show error toasts
@@ -78,7 +87,7 @@ function App() {
 
       <Header />
 
-      <ProgressBar currentStep={step} enableHITL={enableHITL} />
+      <ProgressBar currentStep={step} />
 
       <main className="main-content">
         {step === WORKFLOW_STEPS.UPLOAD && (
@@ -105,31 +114,61 @@ function App() {
             feasibilityReport={feasibilityReport}
             feasibilityFilePath={feasibilityFilePath}
             developmentContextJsonPath={developmentContextJsonPath}
-            enableHITL={enableHITL}
-            onToggleHITL={toggleHITL}
-            onGeneratePlan={
-              enableHITL ? handleGeneratePlanWithHITL : handleGeneratePlan
+            feasibilityVersion={feasibilityVersion}
+            revisionHistory={revisionHistory}
+            onRequestRevision={handleRequestRevision}
+            onRefreshRevisionHistory={handleRefreshRevisionHistory}
+            onFetchRevisionContent={handleFetchRevisionContent}
+            onSyncCurrentVersion={handleSyncCurrentVersion}
+            onApproveAndContinue={() =>
+              setStep(WORKFLOW_STEPS.REVISION_MANAGEMENT)
+            }
+          />
+        )}
+        {step === WORKFLOW_STEPS.REVISION_MANAGEMENT && (
+          <RevisionManagementStep
+            loading={loading}
+            feasibilityReport={feasibilityReport}
+            feasibilityVersion={feasibilityVersion}
+            revisionHistory={revisionHistory}
+            onRequestRevision={handleRequestRevision}
+            onRefreshRevisionHistory={handleRefreshRevisionHistory}
+            onFetchRevisionContent={handleFetchRevisionContent}
+            onContinueToSpecification={() =>
+              setStep(WORKFLOW_STEPS.PROJECT_SPECIFICATION)
             }
           />
         )}
 
-        {step === WORKFLOW_STEPS.HITL_DRAFT_REVIEW && (
-          <HITLReviewStep
-            reviewType={hitlReviewType}
-            reviewData={hitlReviewData}
-            iteration={hitlIteration}
+        {step === WORKFLOW_STEPS.PROJECT_SPECIFICATION && (
+          <ProjectSpecificationStep
             loading={loading}
-            onSubmitReview={handleSubmitReview}
+            onGeneratePlan={() => {
+              if (enablePlanHitl) {
+                handleGeneratePlanWithHitl();
+              } else {
+                handleGeneratePlan();
+              }
+            }}
+            enableHitl={enablePlanHitl}
+            onEnableHitlChange={setEnablePlanHitl}
           />
         )}
 
-        {step === WORKFLOW_STEPS.HITL_REFLECTION_REVIEW && (
+        {step === WORKFLOW_STEPS.PLAN_HITL_REVIEW && (
           <HITLReviewStep
-            reviewType={hitlReviewType}
-            reviewData={hitlReviewData}
-            iteration={hitlIteration}
+            reviewType={planHitlReviewType}
+            reviewData={planHitlPendingData}
+            iteration={planHitlIteration}
             loading={loading}
-            onSubmitReview={handleSubmitReview}
+            onSubmitReview={(payload) =>
+              handleSubmitPlanReview(
+                payload.action,
+                payload.feedback_text,
+                payload.edited_text,
+                payload.reviewer_id
+              )
+            }
           />
         )}
 

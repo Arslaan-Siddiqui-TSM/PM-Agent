@@ -23,7 +23,7 @@ REFLECTION_DEFAULT_TASK = (
 def run_agent(
     use_document_intelligence: bool = True,
     enable_cache: bool = True,
-    max_iterations: int = 5,
+    max_iterations: int = 2,
 ):
     """
     Run the ReWOO agent with all documents in the files directory.

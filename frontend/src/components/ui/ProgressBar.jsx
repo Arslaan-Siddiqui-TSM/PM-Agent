@@ -2,67 +2,32 @@ import PropTypes from "prop-types";
 import { WORKFLOW_STEPS } from "../../constants";
 import "./ProgressBar.css";
 
-const STANDARD_STEPS = [
+const STEPS = [
   { number: WORKFLOW_STEPS.UPLOAD, label: "1. Upload" },
   { number: WORKFLOW_STEPS.DEVELOPMENT_PROCESS, label: "2. Process Info" },
   { number: WORKFLOW_STEPS.FEASIBILITY, label: "3. Feasibility" },
   { number: WORKFLOW_STEPS.REVIEW, label: "4. Review" },
-  { number: WORKFLOW_STEPS.PLAN, label: "5. Plan" },
-];
-
-const HITL_STEPS = [
-  { number: WORKFLOW_STEPS.UPLOAD, label: "1. Upload" },
-  { number: WORKFLOW_STEPS.DEVELOPMENT_PROCESS, label: "2. Process" },
-  { number: WORKFLOW_STEPS.FEASIBILITY, label: "3. Feasibility" },
-  { number: WORKFLOW_STEPS.REVIEW, label: "4. Settings" },
-  { number: WORKFLOW_STEPS.HITL_DRAFT_REVIEW, label: "5. Draft" },
-  { number: WORKFLOW_STEPS.HITL_REFLECTION_REVIEW, label: "6. Critique" },
+  { number: WORKFLOW_STEPS.REVISION_MANAGEMENT, label: "5. Revisions" },
+  { number: WORKFLOW_STEPS.PROJECT_SPECIFICATION, label: "6. Specification" },
+  { number: WORKFLOW_STEPS.PLAN_HITL_REVIEW, label: "6.5 Plan Review" },
   { number: WORKFLOW_STEPS.PLAN, label: "7. Plan" },
 ];
 
-export const ProgressBar = ({ currentStep, enableHITL }) => {
-  const steps = enableHITL ? HITL_STEPS : STANDARD_STEPS;
+export const ProgressBar = ({ currentStep }) => {
+  // Filter steps - only show PLAN_HITL_REVIEW if we're currently in it
+  const displaySteps = STEPS.filter(
+    (step) =>
+      step.number !== WORKFLOW_STEPS.PLAN_HITL_REVIEW ||
+      currentStep === WORKFLOW_STEPS.PLAN_HITL_REVIEW
+  );
 
   // Determine if step is complete, active, or pending
-  const getStepStatus = (stepNumber) => {
-    if (currentStep > stepNumber) return "complete";
-    if (currentStep === stepNumber) return "active";
-    return "pending";
-  };
-
-  // For HITL mode, handle the transition between steps properly
-  const isStepActive = (stepNumber) => {
-    if (enableHITL) {
-      // Special handling for HITL steps
-      if (
-        currentStep === WORKFLOW_STEPS.HITL_DRAFT_REVIEW &&
-        stepNumber === WORKFLOW_STEPS.HITL_DRAFT_REVIEW
-      ) {
-        return true;
-      }
-      if (
-        currentStep === WORKFLOW_STEPS.HITL_REFLECTION_REVIEW &&
-        stepNumber === WORKFLOW_STEPS.HITL_REFLECTION_REVIEW
-      ) {
-        return true;
-      }
-    }
-    return currentStep === stepNumber;
-  };
-
-  const isStepComplete = (stepNumber) => {
-    if (enableHITL) {
-      // In HITL mode, check based on the actual step numbers
-      return currentStep > stepNumber;
-    }
-    return currentStep > stepNumber;
-  };
+  const isStepActive = (stepNumber) => currentStep === stepNumber;
+  const isStepComplete = (stepNumber) => currentStep > stepNumber;
 
   return (
-    <div
-      className={`progress-bar ${enableHITL ? "hitl-mode" : "standard-mode"}`}
-    >
-      {steps.map((step, index) => {
+    <div className="progress-bar standard-mode">
+      {displaySteps.map((step, index) => {
         const status = isStepComplete(step.number)
           ? "complete"
           : isStepActive(step.number)
@@ -79,7 +44,9 @@ export const ProgressBar = ({ currentStep, enableHITL }) => {
               )}
             </div>
             <span className="step-label">{step.label}</span>
-            {index < steps.length - 1 && <div className="step-connector" />}
+            {index < displaySteps.length - 1 && (
+              <div className="step-connector" />
+            )}
           </div>
         );
       })}
@@ -89,9 +56,4 @@ export const ProgressBar = ({ currentStep, enableHITL }) => {
 
 ProgressBar.propTypes = {
   currentStep: PropTypes.number.isRequired,
-  enableHITL: PropTypes.bool,
-};
-
-ProgressBar.defaultProps = {
-  enableHITL: false,
 };

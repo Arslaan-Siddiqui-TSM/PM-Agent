@@ -97,10 +97,25 @@ async def get_file_content(file_path: str = Query(..., description="Path to the 
         path = Path(file_path)
         
         # Security check: ensure the file is within allowed directories
-        allowed_dirs = [Path("outputs").resolve(), Path("uploads").resolve()]
+        allowed_dirs = [
+            Path("output").resolve(),  # Session output files
+            Path("outputs").resolve(),
+            Path("uploads").resolve(),
+            Path("data").resolve(),  # Hardcoded files
+        ]
         file_resolved = path.resolve()
         
-        if not any(file_resolved.is_relative_to(allowed_dir) for allowed_dir in allowed_dirs):
+        # Check if file is within any allowed directory
+        is_allowed = False
+        for allowed_dir in allowed_dirs:
+            try:
+                file_resolved.relative_to(allowed_dir)
+                is_allowed = True
+                break
+            except ValueError:
+                continue
+        
+        if not is_allowed:
             raise HTTPException(
                 status_code=403,
                 detail="Access to this file is not allowed"

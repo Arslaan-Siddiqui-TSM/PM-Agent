@@ -1,13 +1,16 @@
-import { useState, useCallback } from "react";
-import { WORKFLOW_STEPS, REVIEW_TYPES } from "../constants";
+import { useState } from "react";
+import { WORKFLOW_STEPS } from "../constants";
 import {
   uploadFiles,
   checkFeasibility,
   fetchFileContent,
   generatePlan,
-  generatePlanWithHITL,
-  getPendingReview,
-  submitReview,
+  generatePlanWithHitl,
+  getPendingPlanReview,
+  resumePlanReview,
+  reviseFeasibility,
+  getRevisionHistory,
+  getCurrentFeasibilityVersion,
 } from "../services";
 
 const INITIAL_DEV_PROCESS_ANSWERS = {
@@ -36,18 +39,29 @@ export const useProjectWorkflow = () => {
   const [feasibilityFilePath, setFeasibilityFilePath] = useState("");
   const [developmentContextJsonPath, setDevelopmentContextJsonPath] =
     useState("");
+  const [feasibilityVersion, setFeasibilityVersion] = useState(1);
+  const [revisionHistory, setRevisionHistory] = useState([]);
 
-  // Step 5: Plan data
+  // Plan data
   const [finalPlan, setFinalPlan] = useState("");
   const [planFilePath, setPlanFilePath] = useState("");
 
-  // HITL-specific state
-  const [enableHITL, setEnableHITL] = useState(false);
-  const [hitlReviewData, setHitlReviewData] = useState(null);
-  const [hitlRequestId, setHitlRequestId] = useState(null);
-  const [hitlThreadId, setHitlThreadId] = useState(null);
-  const [hitlReviewType, setHitlReviewType] = useState(null);
-  const [hitlIteration, setHitlIteration] = useState(1);
+  // HITL revision state for interrupt/resume flow
+  const [hitlStatus, setHitlStatus] = useState("idle"); // idle | awaiting-feedback | completed
+  const [hitlResumeConfig, setHitlResumeConfig] = useState(null); // resume_config from backend
+
+  // Plan HITL state
+  const [enablePlanHitl, setEnablePlanHitl] = useState(false);
+  const [planHitlRequestId, setPlanHitlRequestId] = useState(null);
+  const [planHitlReviewType, setPlanHitlReviewType] = useState(null);
+  const [planHitlThreadId, setPlanHitlThreadId] = useState(null);
+  const [planHitlIteration, setPlanHitlIteration] = useState(1);
+  const [planHitlPendingData, setPlanHitlPendingData] = useState(null);
+
+  const resetRevisionState = () => {
+    setHitlStatus("idle");
+    setHitlResumeConfig(null);
+  };
 
   /**
    * Handle file upload
@@ -122,7 +136,7 @@ export const useProjectWorkflow = () => {
   };
 
   /**
-   * Handle plan generation (standard mode without HITL)
+   * Handle plan generation (standard mode)
    */
   const handleGeneratePlan = async () => {
     setLoading(true);
@@ -143,152 +157,250 @@ export const useProjectWorkflow = () => {
   };
 
   /**
-   * Handle plan generation with HITL mode
+   * Handle plan generation with HITL enabled
    */
-  const handleGeneratePlanWithHITL = useCallback(async () => {
+  const handleGeneratePlanWithHitl = async () => {
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      const data = await generatePlanWithHITL(sessionId);
+      const data = await generatePlanWithHitl(sessionId);
 
       if (data.status === "pending_review") {
-        // HITL mode: plan generation paused for human review
-        setHitlRequestId(data.request_id);
-        setHitlThreadId(data.thread_id);
-        setHitlReviewType(data.review_type);
-        setHitlIteration(1);
+        // HITL interrupt: fetch pending review data and show review step
+        setPlanHitlRequestId(data.request_id);
+        setPlanHitlReviewType(data.review_type);
+        setPlanHitlThreadId(data.thread_id);
+        setPlanHitlIteration(data.iteration || 1);
 
-        // Fetch the pending review data
-        const reviewData = await getPendingReview(data.request_id);
-        setHitlReviewData(reviewData);
-
-        // Navigate to appropriate HITL step
-        if (data.review_type === REVIEW_TYPES.DRAFT) {
-          setStep(WORKFLOW_STEPS.HITL_DRAFT_REVIEW);
-        } else if (data.review_type === REVIEW_TYPES.REFLECTION) {
-          setStep(WORKFLOW_STEPS.HITL_REFLECTION_REVIEW);
+        // Fetch the pending review content
+        try {
+          const reviewData = await getPendingPlanReview(data.request_id);
+          setPlanHitlPendingData(reviewData);
+          setSuccessMessage(
+            `Plan draft ready for review (${data.review_type})`
+          );
+          setStep(WORKFLOW_STEPS.PLAN_HITL_REVIEW);
+        } catch (err) {
+          console.error("Failed to fetch pending review:", err);
+          setError("Failed to load review data");
         }
-
-        setSuccessMessage("Draft generated! Please review before continuing.");
       } else if (data.status === "completed") {
-        // Plan completed without any interrupts (shouldn't happen in HITL mode)
+        // Plan generation completed without interrupts
         setFinalPlan(data.result);
         setPlanFilePath(data.file_path);
         setSuccessMessage("Project plan generated successfully!");
         setStep(WORKFLOW_STEPS.PLAN);
-      } else {
-        throw new Error(`Unexpected status: ${data.status}`);
       }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  };
 
   /**
-   * Handle HITL review submission
+   * Handle plan review submission (approve, feedback, or terminate)
    */
-  const handleSubmitReview = useCallback(
-    async (payload) => {
-      setLoading(true);
-      setError(null);
-      setSuccessMessage(null);
+  const handleSubmitPlanReview = async (
+    action,
+    feedback,
+    editedText,
+    reviewerId
+  ) => {
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
 
-      try {
-        const result = await submitReview({
-          ...payload,
-          request_id: hitlRequestId,
-        });
+    try {
+      const payload = {
+        request_id: planHitlRequestId,
+        action: action,
+        feedback_text: feedback || null,
+        edited_text: editedText || null,
+        reviewer_id: reviewerId || null,
+      };
 
-        if (result.status === "success") {
-          // Check if the workflow was terminated
-          if (payload.action === "terminate") {
-            // Workflow ended - fetch final plan if available
-            if (result.final_plan) {
-              setFinalPlan(result.final_plan);
-              setPlanFilePath(result.file_path || "");
-            } else {
-              // Use the current draft as the final plan
-              setFinalPlan(hitlReviewData?.draft || "Plan finalized by user.");
-            }
-            setSuccessMessage("Workflow finalized successfully!");
-            setStep(WORKFLOW_STEPS.PLAN);
-            resetHITLState();
-            return;
-          }
+      const data = await resumePlanReview(payload);
 
-          // Check if there's another interrupt (new review needed)
-          if (result.interrupted_again && result.new_request_id) {
-            // Fetch new pending review
-            const newReviewData = await getPendingReview(result.new_request_id);
-            setHitlReviewData(newReviewData);
-            setHitlRequestId(result.new_request_id);
-            setHitlReviewType(newReviewData.type);
-            setHitlIteration(newReviewData.iteration || hitlIteration + 1);
+      console.log("📊 handleSubmitPlanReview: Backend response:", {
+        status: data.status,
+        interrupted_again: data.interrupted_again,
+        new_request_id: data.new_request_id,
+        completed: data.completed,
+        action: data.action,
+      });
 
-            // Navigate to appropriate step
-            if (newReviewData.type === REVIEW_TYPES.DRAFT) {
-              setStep(WORKFLOW_STEPS.HITL_DRAFT_REVIEW);
-              setSuccessMessage("Revision complete! Review the new draft.");
-            } else if (newReviewData.type === REVIEW_TYPES.REFLECTION) {
-              setStep(WORKFLOW_STEPS.HITL_REFLECTION_REVIEW);
-              setSuccessMessage(
-                "Review submitted! Now review the AI critique."
-              );
-            }
-          } else if (result.final_plan || result.result) {
-            // Workflow completed
-            setFinalPlan(result.final_plan || result.result);
-            setPlanFilePath(result.file_path || "");
-            setSuccessMessage("Project plan generated successfully!");
-            setStep(WORKFLOW_STEPS.PLAN);
-            resetHITLState();
-          } else {
-            // Continue processing - check for more interrupts
-            // This handles the case where the review was accepted but we need to poll for next state
-            setSuccessMessage("Review submitted! Processing...");
+      // Check if graph interrupted again (e.g., moving to reflection review)
+      if (data.interrupted_again && data.new_request_id) {
+        // Another interrupt (reflection review or continued iteration)
+        const newRequestId = data.new_request_id;
+        const reviewType = data.review_type;
+        const iteration = data.iteration || planHitlIteration + 1;
 
-            // If we were in draft review, we should expect reflection review next
-            if (hitlReviewType === REVIEW_TYPES.DRAFT) {
-              // Wait briefly and check if there's a new pending review
-              await new Promise((resolve) => setTimeout(resolve, 1500));
+        setPlanHitlRequestId(newRequestId);
+        setPlanHitlReviewType(reviewType);
+        setPlanHitlIteration(iteration);
 
-              // Try to get the thread state or wait for callback
-              if (result.new_request_id) {
-                const newReviewData = await getPendingReview(
-                  result.new_request_id
-                );
-                setHitlReviewData(newReviewData);
-                setHitlRequestId(result.new_request_id);
-                setHitlReviewType(newReviewData.type);
-                setStep(WORKFLOW_STEPS.HITL_REFLECTION_REVIEW);
-              }
-            }
-          }
-        } else {
-          throw new Error(result.message || "Review submission failed");
+        // Fetch updated pending review data
+        try {
+          const reviewData = await getPendingPlanReview(newRequestId);
+          setPlanHitlPendingData(reviewData);
+          setSuccessMessage(
+            `Proceeding to ${reviewType} (iteration ${iteration})`
+          );
+          console.log(
+            "✅ New review data loaded successfully:",
+            newRequestId,
+            reviewType
+          );
+          // Stay on PLAN_HITL_REVIEW step with new data
+        } catch (err) {
+          console.error("Failed to fetch next review:", err);
+          setError("Failed to load next review data");
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        setError(err.message);
-      } finally {
+      } else if (data.completed || data.has_final_plan) {
+        // Plan generation completed
+        setFinalPlan(data.final_plan || "Plan finalized");
+        setPlanFilePath(data.file_path);
+        setSuccessMessage(
+          "Project plan finalized successfully after HITL review!"
+        );
+
+        // Reset HITL state
+        setPlanHitlRequestId(null);
+        setPlanHitlReviewType(null);
+        setPlanHitlThreadId(null);
+        setPlanHitlIteration(1);
+        setPlanHitlPendingData(null);
+
+        setStep(WORKFLOW_STEPS.PLAN);
+        setLoading(false);
+      } else {
+        // Fallback: treat as success but log for debugging
+        console.warn("Unexpected response format from resume-review:", data);
+        setSuccessMessage("Review submitted successfully");
         setLoading(false);
       }
-    },
-    [hitlRequestId, hitlReviewData, hitlReviewType, hitlIteration]
-  );
+    } catch (err) {
+      setError(err.message);
+      console.error("Review submission failed:", err);
+      setLoading(false);
+    }
+  };
 
   /**
-   * Reset HITL-specific state
+   * Refresh revision history from backend
    */
-  const resetHITLState = () => {
-    setHitlReviewData(null);
-    setHitlRequestId(null);
-    setHitlThreadId(null);
-    setHitlReviewType(null);
-    setHitlIteration(1);
+  const handleRefreshRevisionHistory = async () => {
+    if (!sessionId) return;
+    try {
+      const history = await getRevisionHistory(sessionId);
+      setRevisionHistory(history.revisions || []);
+    } catch (err) {
+      console.error("Failed to load revision history", err);
+    }
+  };
+
+  /**
+   * Fetch arbitrary revision content by file path
+   */
+  const handleFetchRevisionContent = async (filePath) => {
+    try {
+      return await fetchFileContent(filePath);
+    } catch (err) {
+      setError(err.message);
+      return "";
+    }
+  };
+
+  /**
+   * Sync current feasibility version from backend (optional)
+   */
+  const handleSyncCurrentVersion = async () => {
+    if (!sessionId) return;
+    try {
+      const data = await getCurrentFeasibilityVersion(sessionId);
+      if (data.current_version) {
+        setFeasibilityVersion(data.current_version);
+      }
+    } catch (err) {
+      console.error("Failed to sync current version", err);
+    }
+  };
+
+  /**
+   * Request or resume a feasibility revision (interrupt-friendly)
+   */
+  const handleRequestRevision = async (humanCritique, revisionInstructions) => {
+    if (!sessionId) {
+      setError("No active session. Please complete previous steps first.");
+      return;
+    }
+
+    const isResume = !!hitlResumeConfig;
+    const critiqueValue = humanCritique && humanCritique.trim();
+    if (isResume && !critiqueValue) {
+      setError("Human critique is required to resume.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const previousVersion = feasibilityVersion;
+      const params = {
+        sessionId,
+        currentVersion: feasibilityVersion,
+      };
+
+      if (isResume) {
+        params.humanCritique = critiqueValue;
+      }
+
+      if (revisionInstructions && revisionInstructions.trim()) {
+        params.revisionInstructions = revisionInstructions.trim();
+      }
+
+      const data = await reviseFeasibility(params);
+
+      if (data && data.status === "interrupt") {
+        setHitlResumeConfig(data.resume_config || null);
+        setHitlStatus("awaiting-feedback");
+        setSuccessMessage("Awaiting human critique to resume revision.");
+        return;
+      }
+
+      if (typeof data.new_version === "number") {
+        setFeasibilityVersion(data.new_version);
+      }
+      if (data.file_path) {
+        setFeasibilityFilePath(data.file_path);
+        try {
+          const content = await fetchFileContent(data.file_path);
+          setFeasibilityReport(content);
+        } catch (err) {
+          console.error("Error fetching revised report", err);
+        }
+      }
+
+      await handleRefreshRevisionHistory();
+      setHitlStatus("completed");
+      setHitlResumeConfig(null);
+      setSuccessMessage(
+        `Feasibility report revised successfully (v${previousVersion} → v${data.new_version}).`
+      );
+    } catch (err) {
+      console.error("Revision request failed:", err);
+      setError(err.message || "Failed to request revision");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /**
@@ -301,23 +413,18 @@ export const useProjectWorkflow = () => {
     setFeasibilityReport("");
     setFeasibilityFilePath("");
     setDevelopmentContextJsonPath("");
+    setFeasibilityVersion(1);
+    setRevisionHistory([]);
     setFinalPlan("");
     setPlanFilePath("");
     setError(null);
-    setEnableHITL(false);
-    resetHITLState();
+    resetRevisionState();
   };
-
-  /**
-   * Toggle HITL mode
-   */
-  const toggleHITL = useCallback((enabled) => {
-    setEnableHITL(enabled);
-  }, []);
 
   return {
     // State
     step,
+    setStep,
     sessionId,
     loading,
     error,
@@ -326,26 +433,33 @@ export const useProjectWorkflow = () => {
     feasibilityReport,
     feasibilityFilePath,
     developmentContextJsonPath,
+    feasibilityVersion,
+    revisionHistory,
+    hitlStatus,
+    hitlResumeConfig,
     finalPlan,
     planFilePath,
-    // HITL state
-    enableHITL,
-    hitlReviewData,
-    hitlRequestId,
-    hitlThreadId,
-    hitlReviewType,
-    hitlIteration,
+    // Plan HITL state
+    enablePlanHitl,
+    planHitlRequestId,
+    planHitlReviewType,
+    planHitlIteration,
+    planHitlPendingData,
 
     // Actions
     handleUpload,
     handleDevelopmentProcessSubmit,
     handleCheckFeasibility,
     handleGeneratePlan,
-    handleGeneratePlanWithHITL,
-    handleSubmitReview,
+    handleGeneratePlanWithHitl,
+    handleSubmitPlanReview,
+    handleRequestRevision,
+    handleRefreshRevisionHistory,
+    handleFetchRevisionContent,
+    handleSyncCurrentVersion,
     handleReset,
+    setEnablePlanHitl,
     setError,
     setSuccessMessage,
-    toggleHITL,
   };
 };

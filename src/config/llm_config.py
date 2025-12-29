@@ -301,6 +301,15 @@ class UnifiedLLM:
         table.add_row("Duration", f"[bright_cyan]{duration:.2f}s[/bright_cyan]")
         
         tokens_per_sec = token_usage['output_tokens'] / duration if duration > 0 else 0
+
+        # Enrich usage for downstream logging/exports
+        token_usage.update({
+            'provider': self.active_provider,
+            'model': current_model,
+            'duration': duration,
+            'tokens_per_sec': tokens_per_sec,
+            'timestamp': time.time(),
+        })
         table.add_row("Speed", f"[dim]{tokens_per_sec:.0f} tok/s[/dim]")
         
         # Add to session tracker

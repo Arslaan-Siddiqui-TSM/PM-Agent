@@ -65,7 +65,7 @@ def test_generate_plan(session_id):
     payload = {
         "session_id": session_id,
         "use_intelligent_processing": True,
-        "max_iterations": 5
+        "max_iterations": 2
     }
     
     print("Sending request... (this may take 2-5 minutes)")

@@ -30,6 +30,7 @@ Note: You can configure multiple providers for **automatic fallback**! If your p
 Create a `.env` file in the project root with your API keys. **Choose one of these configurations:**
 
 ### Option A: NVIDIA NIM (Recommended)
+
 ```env
 # Primary LLM Provider
 LLM_PROVIDER=nvidia
@@ -49,6 +50,7 @@ TAVILY_API_KEY=tvly-your-key-here
 ```
 
 ### Option B: OpenAI
+
 ```env
 LLM_PROVIDER=openai
 OPENAI_API_KEY=sk-your-key-here
@@ -59,6 +61,7 @@ TAVILY_API_KEY=tvly-your-key-here
 ```
 
 ### Option C: Google Gemini
+
 ```env
 LLM_PROVIDER=gemini
 GOOGLE_API_KEY=your-google-key-here
@@ -69,6 +72,7 @@ TAVILY_API_KEY=tvly-your-key-here
 ```
 
 ### Option D: Multi-Provider with Fallback
+
 ```env
 # Primary: NVIDIA, Fallback: OpenAI → Gemini
 LLM_PROVIDER=nvidia
@@ -175,10 +179,59 @@ The system uses **pure LangChain ecosystem** (no OpenAI SDK) and automatically f
 
 This ensures maximum reliability!
 
+## Version Comparison & Token Analysis
+
+The system supports **full version history tracking** and **token usage analysis** across feasibility generation and human-in-the-loop revisions.
+
+### View Revision History
+
+```bash
+# Get all versions (v1, v2, v3...) for a session
+curl http://localhost:8000/api/revision-history/{session_id}
+```
+
+### Compare Versions
+
+```bash
+# Full comparison (summary + side-by-side + diff)
+python scripts/compare_versions.py {session_id} 1 2
+
+# Summary only (character/line counts)
+python scripts/compare_versions.py {session_id} 1 2 --summary
+
+# Diff only (color-coded changes)
+python scripts/compare_versions.py {session_id} 1 2 --diff
+
+# Preview only (first 50 lines side-by-side)
+python scripts/compare_versions.py {session_id} 1 2 --preview
+```
+
+### View Token Usage
+
+```bash
+# Show all token reports for a session
+python scripts/token_report_reader.py {session_id} full
+
+# See cost breakdown and per-call metrics
+python scripts/token_report_reader.py {session_id} list
+```
+
+**Features:**
+
+- ✅ Initial report saved as v1 (enables v1-to-vN comparison)
+- ✅ Revision history tracks all versions with timestamps
+- ✅ Token metrics saved per version (cost breakdown)
+- ✅ Color-coded diff output (green = added, red = removed)
+- ✅ Side-by-side preview for quick visual comparison
+- ✅ Character/line count tracking to monitor report growth
+
+See **[VERSION_COMPARISON_GUIDE.md](docs/VERSION_COMPARISON_GUIDE.md)** for detailed examples and workflows.
+
 ## More docs
 
 - Environment/config: `docs/ENV_CONFIGURATION.md`
 - Architecture and structure: `docs/PROJECT_STRUCTURE.md`, `docs/ARCHITECTURE_DIAGRAMS.md`
 - Migration and implementation notes: `docs/implementation/*`
+- Version comparison and token analysis: `docs/VERSION_COMPARISON_GUIDE.md`
 
 —
